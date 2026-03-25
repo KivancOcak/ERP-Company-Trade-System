@@ -1,0 +1,2590 @@
+<!DOCTYPE html>  
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Script SQL Stored Procedure Sales System</title>
+  <style>
+    body {
+      background-image :url('Logistic map 5.jpg');
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      color: lime;
+      font-family: monospace;
+      font-size: 1.2rem;
+      padding-top: 20px;
+    }
+    .container {
+      padding: 0 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 1000px; /* expanded width */
+      box-sizing: border-box;
+    }
+    h2 {
+      font-size: 2rem;
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding-bottom: 10px;
+    }
+
+
+
+    #initialScreen, #menu {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    #menuOutput {
+      background: #111;
+      padding: 10px;
+      border-radius: 10px;
+      max-height: 600px; /* increased height */
+      overflow-y: auto;
+      overflow-x: auto; /* allow horizontal scroll */
+      width: calc(100% + 40px); /* expand a bit */
+      margin-left: -20px; /* center the expanded area */
+      box-sizing: border-box;
+      color: lime;
+      margin-top: 10px;
+    }
+    pre {
+      margin: 0;
+      font-family: monospace;
+      font-size: 1rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      text-align: left;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      min-width: 900px; /* ensure table can scroll if wide */
+    }
+    th, td {
+      border: 1px solid lime;
+      padding: 5px;
+      text-align: center;
+      font-size: 1rem;
+    }
+    th {
+      background: rgba(50, 50, 50, 0.8);
+    }
+    td.text-left {
+      text-align: left;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      background: darkgreen;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      width: 80%;
+      max-width: 250px;
+      text-align: center;
+    }
+    button:hover {
+  background: limegreen; /* lighter green on hover */
+  transform: scale(1.03);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+    button:disabled {
+      background: gray;
+      cursor: not-allowed;
+    }
+    #menuOutput {
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  transform-origin: center center;
+}
+/* Fade-out + slight 3D rotate */
+.fade-out {
+  opacity: 0;
+  transform: perspective(600px) rotateY(15deg) scale(0.98);
+}
+/* Fade-in back to normal */
+.fade-in {
+  opacity: 1;
+  transform: perspective(600px) rotateY(0deg) scale(1);
+}
+
+ 
+ #mapContainer {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 100px); /* or another value so canvas is visible */
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Make canvas flex-grow larger so it’s wider relative to panel */
+#logisticsCanvas {
+  flex: 3; /* was flex:1; now 3 parts for map, 1 part for panel */
+  background: #222;
+  border: 1px solid lime;
+}
+/* Side panel: flex:1, with min/max widths to avoid overlap */
+#mapPanel {
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
+  background: #111;
+  color: lime;
+  padding: 10px;
+  box-sizing: border-box;
+  font-family: monospace;
+  overflow-y: auto;
+}
+/* Vehicle info box: make more visible */
+#vehicleInfoBox {
+  position: absolute;
+  background: rgba(0,0,0,0.85);
+  color: lime;
+  padding: 10px;
+  border: 1px solid lime;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  pointer-events: none;
+  display: none;
+  z-index: 10000;
+  box-shadow: 0 0 8px rgba(0,255,0,0.7);
+}
+/* Buttons hover inherited; ensure consistent */
+#mapPanel button:hover {
+  background: limegreen;
+  transform: scale(1.03);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+
+    #userActions, #salesActions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    #activityInput {
+      margin: 5px;
+      padding: 5px;
+      width: 80%;
+      max-width: 250px;
+      font-size: 1rem;
+      background: #222;
+      color: lime;
+      border: 1px solid lime;
+    }
+    /* Live clock/date box */
+    #liveClock {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      color: lime;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 1rem;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+    }
+    /* Modal style for text input */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    .modal {
+      background: #222;
+      padding: 20px;
+      border-radius: 8px;
+      color: lime;
+      width: 80%;
+      max-width: 400px;
+      font-family: monospace;
+    }
+    .modal textarea {
+      width: 100%;
+      height: 100px;
+      background: #111;
+      color: lime;
+      border: 1px solid lime;
+      resize: none;
+      font-family: monospace;
+    }
+    .modal button {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="liveClock"></div>
+  <div id="modalContainer" style="display:none;"></div>
+
+  <div class="container">
+    <h2>ERP Company Trade System</h2>
+    <div id="initialScreen">
+      <pre id="output">Please choose: Register new user, Login, Forgot Password, or Exit.\nExisting sample user: username: ali, password: 1234</pre>
+      <button id="btnRegister">Register New User</button>
+      <button id="btnLogin">Login</button>
+      <button id="btnForgotPassword">Forgot Password</button>
+      <button id="btnExit">Exit</button>
+    </div>
+    <div id="menu" style="display:none; width:100%;">
+      <h2 id="welcome"></h2>
+      <div id="userActions" style="display:none;">
+        <button id="btnShowMyInfo">Show My Info</button>
+        <button id="btnUpdateMyInfo">Update My Info</button>
+        <button id="btnDeleteMyAccount">Delete My Account</button>
+        <button id="btnListAllUsers">List All Employee (Access Key Required)</button>
+        <button id="btnSalesDashboard">Sales Dashboard</button>
+        <button id="btnExportCSV" style="margin:4px;">📤 Export Sales to CSV</button>
+        <button id="btnViewCompanyAccount">View Company Account(Access key Required)</button>
+        <button id="btnLogout">Logout</button>
+      </div>
+      <div id="salesActions" style="display:none;">
+        <button id="btnViewProducts">View Products</button>
+        <button id="btnCreateOrder">Create Order</button>
+        <button id="btnUpdateOrder">View/Update Orders</button>
+        <button id="btnViewProfit">View Profit/Loss Summary</button>
+        <button id="btnDeleteOrder">Delete Orders</button>
+        <button id="btnSpecialCodes">Special Action Codes</button>
+        <input id="activityInput" placeholder="Enter action code" />
+        <button id="btnBackSales">Back to Menu</button>
+      </div>
+      <div id="menuOutput"></div>
+    </div>
+  </div>
+
+  <script>
+    const AUTH_KEY = "135790";
+    const COMPANY_ACCOUNT_CODE = "455678";
+    let users = [];
+    let currentUser = null;
+
+const suppliers = {
+  'Datagate': [
+  { id: 'ITM001', name: 'Mercedes-Benz S-Class 2023', quantity: 2, salePrice: 150000, cost: 120000 },
+  { id: 'ITM002', name: 'Tesla Model S 2023', quantity: 2, salePrice: 140000, cost: 100000 },
+  { id: 'ITM003', name: 'iPhone 14 Pro', quantity: 25, salePrice: 999, cost: 700 },
+  { id: 'ITM004', name: 'Dell XPS 15 Laptop', quantity: 8, salePrice: 1800, cost: 1200 },
+  { id: 'ITM005', name: 'Samsung Galaxy S23 Ultra', quantity: 20, salePrice: 1199, cost: 800 },
+  { id: 'ITM006', name: 'PlayStation 5 Console', quantity: 5, salePrice: 499, cost: 400 },
+  { id: 'ITM007', name: 'LG 27" 4K Monitor', quantity: 7, salePrice: 350, cost: 220 },
+  { id: 'ITM008', name: 'Sony WH-1000XM5 Headphones', quantity: 13, salePrice: 399, cost: 250 },
+  ],
+  'Netex': [
+  { id: 'ITM009', name: 'Logitech MX Mechanical Keyboard', quantity: 10, salePrice: 150, cost: 90 },
+  { id: 'ITM010', name: 'Razer DeathAdder V2 Mouse', quantity: 15, salePrice: 70, cost: 40 },
+  { id: 'ITM011', name: 'HP OfficeJet Pro Printer', quantity: 4, salePrice: 299, cost: 180 },
+  { id: 'ITM012', name: 'Netgear Nighthawk Router', quantity: 9, salePrice: 199, cost: 120 },
+  { id: 'ITM013', name: 'Seagate External HDD 2TB', quantity: 10, salePrice: 100, cost: 60 },
+  { id: 'ITM014', name: 'Kingston USB Flash 128GB', quantity: 20, salePrice: 25, cost: 10 },
+  { id: 'ITM015', name: 'Logitech C920 HD Webcam', quantity: 7, salePrice: 80, cost: 50 },
+  { id: 'ITM016', name: 'Apple Watch Series 8', quantity: 13, salePrice: 399, cost: 250 },
+  ],
+  'TechCorp': [
+  {id: 'ITM017', name: 'DJI Mini 3 Drone', quantity: 2, salePrice: 759, cost: 500 },
+  { id: 'ITM018', name: 'Canon EOS R6 Camera', quantity: 3, salePrice: 2500, cost: 1800 },
+  { id: 'ITM019', name: 'Epson Portable Projector', quantity: 2, salePrice: 1200, cost: 800 },
+  { id: 'ITM020', name: 'NVIDIA RTX 3080 Graphics Card', quantity: 1, salePrice: 699, cost: 500 },
+  { id: 'ITM021', name: 'MacBook Pro 16" 2023', quantity: 2, salePrice: 2500, cost: 1800 },
+  { id: 'ITM022', name: 'Google Pixel 7 Pro', quantity: 15, salePrice: 899, cost: 600 },
+  { id: 'ITM023', name: 'Microsoft Surface Pro 8', quantity: 5, salePrice: 1100, cost: 750 },
+  { id: 'ITM024', name: 'Bose QuietComfort Earbuds', quantity: 11, salePrice: 279, cost: 180 },
+  ],
+  'MegaSupply': [
+  {id: 'ITM025', name: 'Asus ROG Gaming Laptop', quantity: 3, salePrice: 2000, cost: 1500 },
+  { id: 'ITM026', name: 'X Box 360', quantity: 3, salePrice: 2000, cost: 1500 },
+  { id: 'ITM027', name: 'Sony Headphone', quantity: 3, salePrice: 2000, cost: 1500 },
+  { id: 'ITM028', name: 'Samsung Galaxy S15', quantity: 3, salePrice: 2000, cost: 1500 },
+  { id: 'ITM029', name: 'Accessory earings Schwarowski', quantity: 3, salePrice: 2000, cost: 1500 },
+  { id: 'ITM030', name: 'PS5 Pro', quantity: 3, salePrice: 2000, cost: 1500 },
+  { id: 'ITM031', name: 'Samsung QLED TV 55" 2023', quantity: 3, salePrice: 1200, cost: 800 },
+  { id: 'ITM032', name: 'Xbox Series X Console', quantity: 4, salePrice: 499, cost: 400 },
+  { id: 'ITM033', name: 'Fitbit Charge 5', quantity: 7, salePrice: 149, cost: 90 },
+  { id: 'ITM034', name: 'Kindle Paperwhite', quantity: 6, salePrice: 129, cost: 80 },
+  { id: 'ITM035', name: 'GoPro Hero 10', quantity: 5, salePrice: 399, cost: 250 }
+  ]
+};
+
+    const activityMap = {
+      'MM03': { action: 'VIEW_STOCK', desc: 'Opens the Company Stocks Inventory page' },
+      'MN23': { action: 'VIEW_PRODUCTS', desc: 'Opens the Products view page' },
+      'CR01': { action: 'CREATE_ORDER', desc: 'Opens the Create Order page' },
+      'UP01': { action: 'UPDATE_ORDER', desc: 'Opens the Update/View Orders page' },
+      'PR01': { action: 'VIEW_PROFIT', desc: 'Opens the Profit/Loss Summary page' },
+      'DL01': { action: 'DELETE_ORDER', desc: 'Opens the Delete Orders page' },
+      'CRQ1': { action: 'CUSTOMER_REQUESTS', desc: 'Opens the Customer Requests page' },
+      'AC01': { action: 'COMPANY_ACCOUNT', desc: 'Opens the Company Account page (requires authority code)' },
+      'BUY1': { action:'BUY_PURCHASE', desc: 'Opens the Purchase Page for Motors' },
+      'RS01': { action: 'RESET_SYSTEM', desc: 'Reset system to default state' },
+      'FG01': { action: 'FIN_GRAPH', desc: 'Company Financial Graph Over Years' },
+      'LG01': { action: 'LOGISTICS_MAP', desc: 'Virtual Google Logistic Cargo Lines Map' }
+    };
+
+    const output = document.getElementById("output");
+    const menuOutput = document.getElementById("menuOutput");
+    const initialScreen = document.getElementById("initialScreen");
+    const menuDiv = document.getElementById("menu");
+    const welcomeEl = document.getElementById("welcome");
+    const userActions = document.getElementById("userActions");
+    const salesActions = document.getElementById("salesActions");
+    const activityInput = document.getElementById("activityInput");
+    const modalContainer = document.getElementById("modalContainer");
+
+    document.getElementById("btnRegister").onclick = registerFlow;
+    document.getElementById("btnLogin").onclick = loginFlow;
+    document.getElementById("btnForgotPassword").onclick = forgotFlow;
+    document.getElementById("btnExit").onclick = exitFlow;
+    document.getElementById("btnShowMyInfo").onclick = showMyInfo;
+    document.getElementById("btnUpdateMyInfo").onclick = updateMyInfo;
+    document.getElementById("btnDeleteMyAccount").onclick = deleteMyAccount;
+    document.getElementById("btnListAllUsers").onclick = listAllUsers;
+    document.getElementById("btnSalesDashboard").onclick = openSales;
+    document.getElementById("btnViewCompanyAccount").onclick = viewCompanyAccount;
+    document.getElementById("btnLogout").onclick = logout;
+    document.getElementById("btnViewProducts").onclick = viewProductsSales;
+    document.getElementById("btnCreateOrder").onclick = createOrderSales;
+    document.getElementById("btnUpdateOrder").onclick = updateOrderSales;
+    document.getElementById("btnViewProfit").onclick = viewProfitSales;
+    document.getElementById("btnDeleteOrder").onclick = deleteOrderSales;
+    document.getElementById("btnSpecialCodes").onclick = showSpecialCodes;
+    document.getElementById("btnBackSales").onclick = closeSales;
+    document.getElementById('btnExportCSV').onclick = exportTradesToCSV;
+    activityInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') handleActivityCode();
+    });
+
+    function loadUsers() {
+      const stored = localStorage.getItem('users');
+      if (stored) {
+        try { users = JSON.parse(stored); } catch(e) { users = []; }
+      }
+      if (!users.length) {
+        users = [
+          { id: 1, name: "Ali", email: "ali@example.com", phone: "05001234567", username: "ali", password: "1234", businessAcc: "BA1001", secretQuestion: "What is your favorite color?", secretAnswer: "red" },
+          { id: 2, name: "Ayşe", email: "ayse@example.com", phone: "05559876543", username: "ayse", password: "5678", businessAcc: "BA1002", secretQuestion: "What is your favorite color?", secretAnswer: "blue" }
+        ];
+        saveUsers();
+      }
+    }
+    function saveUsers() { localStorage.setItem('users', JSON.stringify(users)); }
+    function loadCurrentUser() {
+      const stored = localStorage.getItem('currentUser');
+      if (stored) {
+        try {
+          const cu = JSON.parse(stored);
+          const user = users.find(u => u.username === cu.username && u.password === cu.password);
+          if (user) {
+            currentUser = {...user};
+            showMenu();
+            welcomeEl.innerText = `🔐 Welcome back ${user.name}`;
+            userActions.style.display = 'flex';
+            return true;
+          }
+        } catch(e){}
+      }
+      return false;
+    }
+
+    function renderInitial(message) { output.innerText = message; }
+    function renderMenu(html) { menuOutput.innerHTML = `<pre style='color:lime; white-space:pre-wrap;'>${html}</pre>`; }
+
+    function registerFlow() {
+      const name = prompt("Enter your name:"); if (!name) return renderInitial("Registration cancelled.");
+      let username = prompt("Choose a username:"); if (!username) return renderInitial("Registration cancelled."); username = username.trim();
+      if (users.find(u => u.username === username)) return renderInitial("Username taken. Choose another.");
+      const email = prompt("Enter your email:"); if (!email) return renderInitial("Registration cancelled.");
+      const phone = prompt("Enter phone number:"); if (!phone) return renderInitial("Registration cancelled.");
+      const password = prompt("Choose a password:"); if (!password) return renderInitial("Registration cancelled.");
+      const secretQuestion = prompt("Enter a secret question for password recovery:"); if (!secretQuestion) return renderInitial("Registration cancelled.");
+      const secretAnswer = prompt("Enter the answer to your secret question:"); if (!secretAnswer) return renderInitial("Registration cancelled.");
+      const nextId = users.length ? users[users.length-1].id+1 : 1;
+      const businessAcc = 'BA'+(1000+nextId);
+      users.push({ id: nextId, name, email, phone, username, password, businessAcc, secretQuestion, secretAnswer });
+      saveUsers();
+      renderInitial(`✅ Registration successful. Your business account: ${businessAcc}. You can now login, ${name}.`);
+    }
+
+    function loginFlow() {
+      const choice = prompt("Login or Forgot Password? Enter '1' for Login, '2' for Forgot Password:");
+      if (choice==='2') { forgotFlow(); return; }
+      if (choice!=='1') return renderInitial("Invalid choice.");
+      let username = prompt("Enter username:"); if (!username) return renderInitial("Login cancelled."); username=username.trim();
+      let password = prompt("Enter password:"); if (!password) return renderInitial("Login cancelled.");
+      const user = users.find(u=>u.username===username&&u.password===password);
+      if (user) {
+        currentUser={...user}; localStorage.setItem('currentUser', JSON.stringify({username:user.username,password:user.password}));
+        showMenu(); welcomeEl.innerText=`🔐 Welcome ${user.name}`; userActions.style.display='flex'; renderMenu("Choose an action.");
+      } else renderInitial("❌ Invalid credentials. Try again.");
+    }
+    function forgotFlow() {
+      let username = prompt("Enter your username for password recovery:"); if (!username) return renderInitial("Cancelled."); username=username.trim();
+      const user = users.find(u=>u.username===username);
+      if (!user) return renderInitial("User not found.");
+      const answer = prompt(user.secretQuestion); if (answer===null) return renderInitial("Cancelled.");
+      if (answer===user.secretAnswer) renderInitial(`🔑 Your password is: ${user.password}`);
+      else renderInitial("❌ Incorrect answer to secret question.");
+    }
+    function exitFlow() { renderInitial("Exiting... Close the tab."); setTimeout(()=>window.close(),500); }
+    function showMenu() { initialScreen.style.display='none'; menuDiv.style.display='block'; output.innerText=''; salesActions.style.display='none'; activityInput.value = ''; }
+    function logout() { currentUser=null; localStorage.removeItem('currentUser'); menuDiv.style.display='none'; initialScreen.style.display='block'; renderInitial("Logged out. Choose Register, Login, Forgot Password, or Exit."); }
+
+    function showMyInfo() { if(!currentUser) return; const u=currentUser; renderMenu(`👤 Your Info:\nID: ${u.id}\nName: ${u.name}\nEmail: ${u.email}\nPhone: ${u.phone}\nUsername: ${u.username}\nPassword: ${u.password}\nBusinessAcc: ${u.businessAcc}`); }
+    function updateMyInfo() {
+      if(!currentUser) return;
+      let u=currentUser;
+      const newName=prompt("Enter new name:",u.name); if(newName)u.name=newName;
+      const newEmail=prompt("Enter new email:",u.email); if(newEmail)u.email=newEmail;
+      const newPhone=prompt("Enter new phone:",u.phone); if(newPhone)u.phone=newPhone;
+      const newPassword=prompt("Choose a new password (leave blank to keep):"); if(newPassword)u.password=newPassword;
+      const changeSQ=prompt("Change secret question? Enter 'yes' to change:");
+      if(changeSQ&&changeSQ.toLowerCase()==='yes'){
+        const newQ=prompt("Enter new secret question:",u.secretQuestion); if(newQ)u.secretQuestion=newQ;
+        const newA=prompt("Enter answer to new secret question:",u.secretAnswer); if(newA)u.secretAnswer=newA;
+      }
+      const idx=users.findIndex(x=>x.username===u.username);
+      if(idx>=0)users[idx]=u; saveUsers(); currentUser=u; renderMenu("✏️ Your info updated.");
+    }
+    function deleteMyAccount() { if(!currentUser) return; const c=prompt("Type DELETE to confirm deletion of your account:"); if(c==='DELETE'){ users=users.filter(u=>u.username!==currentUser.username); saveUsers(); localStorage.removeItem('currentUser'); currentUser=null; renderMenu("❌ Your account deleted."); setTimeout(()=>{ logout(); },1000);} else renderMenu("❌ Deletion cancelled."); }
+
+    function loadTrades() { const stored=localStorage.getItem('trades'); try{return stored?JSON.parse(stored):[];}catch(e){return [];} }
+    function saveTrades(trades){ localStorage.setItem('trades',JSON.stringify(trades)); }
+
+    function parsePrice(input) {
+      if (!input) return null;
+      const cleaned = input.replace(/[^0-9.]/g, '');
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? null : num;
+    }
+     function calculateKDV(price) { return price * 0.20; }
+    function calculateOTV(price) {
+      let rate = 0;
+      if (price <= 184000) rate = 0.45;
+      else if (price <= 220000) rate = 0.50;
+      else if (price <= 250000) rate = 0.60;
+      else if (price <= 280000) rate = 0.70;
+      else rate = 0.80;
+      return price * rate;
+    }
+
+    function openSales() {
+      if(!currentUser) return renderMenu("⚠️ Please login first.");
+      userActions.style.display = 'none';
+      salesActions.style.display = 'flex';
+      renderMenu("Sales Dashboard: Choose an action or enter action code.");
+      activityInput.value = '';
+    }
+    function closeSales() {
+      salesActions.style.display = 'none';
+      userActions.style.display = 'flex';
+      renderMenu("Back to main menu.");
+      activityInput.value = '';
+    }
+    function showSpecialCodes() {
+      let html = '<table><thead><tr><th>Action Code</th><th>Description</th></tr></thead><tbody>';
+      for (const [code, info] of Object.entries(activityMap)) {
+        html += `<tr><td>${code}</td><td class="text-left">${info.desc}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      menuOutput.innerHTML = html;
+    }
+    function handleActivityCode() {
+      const code = activityInput.value.trim().toUpperCase();
+      if (!code) return;
+      activityInput.value = '';
+      const info = activityMap[code];
+      if (!info) {
+        renderMenu("⛔ Unknown action code.");
+        return;
+      }
+      const action = info.action;
+      switch(action) {
+        case 'VIEW_PRODUCTS': viewProductsSales(); break;
+        case 'CREATE_ORDER': createOrderSales(); break;
+        case 'UPDATE_ORDER': updateOrderSales(); break;
+        case 'VIEW_PROFIT': viewProfitSales(); break;
+        case 'DELETE_ORDER': deleteOrderSales(); break;
+        case 'VIEW_STOCK': showInventoryTable(); break;
+        case 'CUSTOMER_REQUESTS': showCustomerRequests(); break;
+        case 'COMPANY_ACCOUNT': viewCompanyAccount(); break;
+        case 'BUY_PURCHASE': openBuyPage(); break;  
+        case 'RESET_SYSTEM': openResetPage(); break;
+        case 'FIN_GRAPH': openFinancialGraphPage(); break;
+        case 'LOGISTICS_MAP': openLogisticsMapPage(); break;
+        default:
+          renderMenu("⛔ Action not implemented.");
+      }
+    }
+
+    function viewProductsSales() {
+      const acc = currentUser.businessAcc;
+      const trades = loadTrades().filter(t=>t.businessAcc===acc);
+      if(!trades.length) {
+        renderMenu("No products/orders found for your account.");
+        return;
+      }
+      let html = '<table><thead><tr>' +
+        '<th>OrderID</th><th>ProdID</th><th>Type</th><th>Qty</th><th>Price</th><th>Cost</th><th>KDV</th><th>ÖTV</th><th>CargoCost</th><th>Address</th><th>Dam?</th><th>DamQty</th><th>Status</th><th>OrderDate</th><th>ETA</th>' +
+        '</tr></thead><tbody>';
+      trades.forEach(t=>{
+        html += '<tr>' +
+          `<td>${t.orderId}</td>` +
+          `<td>${t.productId}</td>` +
+          `<td>${t.type}</td>` +
+          `<td>${t.quantity}</td>` +
+          `<td>${t.price.toFixed(2)}</td>` +
+          `<td>${t.cost.toFixed(2)}</td>` +
+          `<td>${t.kdv.toFixed(2)}</td>` +
+          `<td>${t.otv? t.otv.toFixed(2): '0.00'}</td>` +
+          `<td>${t.cargoCost? t.cargoCost.toFixed(2): '0.00'}</td>` +
+          `<td class="text-left">${t.address || ''}</td>` +
+          `<td>${t.isDamaged? 'Y':'N'}</td>` +
+          `<td>${t.damagedQty}</td>` +
+          `<td>${t.status}</td>` +
+          `<td>${t.orderDate}</td>` +
+          `<td>${t.etaDays}</td>` +
+        '</tr>';
+      });
+      html += '</tbody></table>';
+      menuOutput.innerHTML = html;
+    }
+
+    function exportTradesToCSV() {
+  const trades = loadTrades().filter(t => t.businessAcc === currentUser.businessAcc);
+  if (trades.length === 0) {
+    alert("No sales to export.");
+    return;
+  }
+
+  const headers = [
+    'Order ID', 'Product ID', 'Qty', 'Price', 'Cost',
+    'KDV', 'OTV', 'Cargo', 'Damaged Qty', 'Damaged Cost',
+    'Order Date', 'Customer', 'Status'
+  ];
+
+  const csv = [
+    headers.join(','),
+    ...trades.map(t => [
+      t.orderId, t.productId, t.quantity, t.price, t.cost,
+      t.kdv, t.otv, t.cargoCost, t.damagedQty || 0,
+      (t.cost * (t.damagedQty || 0)),
+      t.orderDate, t.customer || '', t.status
+    ].map(val => `"${val}"`).join(','))
+  ].join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `SalesReport_${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+
+
+    function createOrderSales() {
+      const acc = currentUser.businessAcc;
+      let trades = loadTrades();
+      const productId = prompt("Enter unique Product ID:"); if(!productId) { renderMenu("Cancelled."); return; }
+      if(trades.some(t=>t.businessAcc===acc && t.productId===productId)) { renderMenu("❌ Product ID exists. Choose a different ID."); return; }
+      const type = prompt("Enter Product Type (e.g., 'Samsung QLED TV 55\"')"); if(!type) { renderMenu("Cancelled."); return; }
+      const qtyInput = prompt("Enter Quantity:"); const quantity = parseInt(qtyInput,10); if(isNaN(quantity)||quantity<=0) { renderMenu("Invalid quantity."); return; }
+      const priceInput = prompt("Enter Sale Price per unit:"); const price = parsePrice(priceInput); if(price===null||price<=0) { renderMenu("Invalid price."); return; }
+      const costInput = prompt("Enter Cost per unit:"); const cost = parsePrice(costInput); if(cost===null||cost<0) { renderMenu("Invalid cost."); return; }
+      const distInput = prompt("Enter delivery distance in KM (integer):"); const distance = parseInt(distInput,10); let cargoCost = 0;
+      if(!isNaN(distance) && distance>0) { cargoCost = Math.ceil(distance/10) * 10; }
+      const address = prompt("Enter delivery address:");
+      const damagedAns = prompt("Is there any damaged item? (yes/no):","no"); let isDamaged=false, damagedQty=0;
+      if(damagedAns&&damagedAns.toLowerCase()==='yes'){ const dq=parseInt(prompt(`Enter number of damaged items (<= ${quantity}):`),10); damagedQty=(isNaN(dq)||dq<0||dq>quantity)?0:dq; isDamaged=true; }
+      const status="Ordered";
+      const orderDate=new Date().toISOString().split('T')[0];
+      const etaDays=parseInt(prompt("Enter ETA days:"),10)||0;
+      const kdv = calculateKDV(price);
+      let otv = 0;
+      if(type.toLowerCase().includes('car')||type.toLowerCase().includes('mercedes')||type.toLowerCase().includes('tesla')) { otv = calculateOTV(price); }
+      trades.push({ orderId: productId, businessAcc:acc, productId, type, quantity, price, cost, kdv, otv, cargoCost, address, isDamaged, damagedQty, status, orderDate, etaDays }); saveTrades(trades);
+      renderMenu(`✅ Order created. KDV tax: ${kdv.toFixed(2)}, ÖTV tax: ${otv.toFixed(2)}, CargoCost: ${cargoCost.toFixed(2)}`);
+}  
+    
+
+    function updateOrderSales() {
+      const acc = currentUser.businessAcc;
+      let trades = loadTrades();
+      let userTrades = trades.filter(t=>t.businessAcc===acc);
+      if(!userTrades.length) { renderMenu("No orders to view/update."); return; }
+      let list="Orders:\n";
+      userTrades.forEach(t=>{ list+=`${t.orderId}) Prod:${t.productId} Status:${t.status}\n`; });
+      const sel = prompt(list+"Enter order ID to update, or Cancel:"); if(!sel) { renderMenu("Cancelled."); return; }
+      const idxGlobal = trades.findIndex(t=>t.orderId===sel && t.businessAcc===acc);
+      if(idxGlobal<0) { renderMenu("Order ID not found."); return; }
+      let order = trades[idxGlobal];
+      const newProd = prompt("Enter new Product ID (leave blank to keep):", order.productId);
+      if(newProd && newProd!==order.productId) {
+        if(trades.some(t=>t.businessAcc===acc && t.productId===newProd)) { renderMenu("❌ Product ID exists. Update canceled."); return; }
+        order.productId=newProd; order.orderId=newProd;
+      }
+      const newType = prompt("Enter new Product Type (leave blank to keep):", order.type);
+      if(newType) order.type=newType;
+      const newQty = prompt("Enter new Quantity (leave blank to keep):", order.quantity);
+      if(newQty){ const nq=parseInt(newQty,10); if(!isNaN(nq)&&nq>0) order.quantity=nq; }
+      const newPriceInput = prompt("Enter new Sale Price per unit (include symbols or leave blank):", order.price);
+      if(newPriceInput){ const np=parsePrice(newPriceInput); if(np!==null&&np>0) order.price=np; }
+      const newCostInput = prompt("Enter new Cost per unit (include symbols or leave blank):", order.cost);
+      if(newCostInput){ const nc=parsePrice(newCostInput); if(nc!==null&&nc>=0) order.cost=nc; }
+      const newDistInput = prompt("Enter new delivery distance in KM (leave blank to keep):");
+      if(newDistInput){ const d=parseInt(newDistInput,10); if(!isNaN(d)&&d>0) order.cargoCost = Math.ceil(d/10)*10; }
+      const newAddress = prompt("Enter new delivery address (leave blank to keep):", order.address);
+      if(newAddress) order.address=newAddress;
+      const changeDam = prompt("Change damaged info? Enter 'yes' to change or leave blank:");
+      if(changeDam&&changeDam.toLowerCase()==='yes'){
+        const newDam = prompt("Is there damaged items? (yes/no):", order.isDamaged?'yes':'no');
+        if(newDam&&newDam.toLowerCase()==='yes'){ order.isDamaged=true; const dq=prompt(`Enter damaged quantity (<=${order.quantity}):`, order.damagedQty); const di=parseInt(dq,10); if(!isNaN(di)&&di>=0&&di<=order.quantity)order.damagedQty=di; }
+        else{ order.isDamaged=false; order.damagedQty=0; }
+      }
+      const newStatus = prompt("Enter new status (leave blank to keep):", order.status);
+      if(newStatus) order.status=newStatus;
+      const newETA = prompt("Enter new ETA days (leave blank to keep):", order.etaDays);
+      if(newETA){ const ne=parseInt(newETA,10); if(!isNaN(ne)&&ne>=0) order.etaDays=ne; }
+      order.kdv = calculateKDV(order.price);
+      if(order.type.toLowerCase().includes('car')||order.type.toLowerCase().includes('mercedes')||order.type.toLowerCase().includes('tesla')) order.otv = calculateOTV(order.price);
+      else order.otv = 0;
+      trades[idxGlobal]=order; saveTrades(trades);
+      renderMenu("✏️ Order updated. Taxes recalculated.");
+    }
+
+    function viewProfitSales() {
+      const acc = currentUser.businessAcc;
+      const trades = loadTrades().filter(t=>t.businessAcc===acc);
+      if(!trades.length) { renderMenu("No orders for summary."); return; }
+      let totalRevenue=0, totalCost=0, totalKDV=0, totalOTV=0, totalCargo=0, totalDamagedCost=0;
+      trades.forEach(t=>{
+        totalRevenue+=t.price*t.quantity;
+        totalCost+=t.cost*t.quantity;
+        totalKDV+=t.kdv*t.quantity;
+        totalOTV+=t.otv*t.quantity;
+        totalCargo+=(t.cargoCost||0);
+        if(t.isDamaged) totalDamagedCost+=t.cost*t.damagedQty;
+      });
+      const grossProfit=totalRevenue-totalCost;
+      const netProfit=grossProfit-totalKDV-totalOTV-totalCargo-totalDamagedCost;
+      let html = '<table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>';
+      const rows = [
+        ['Total Revenue', totalRevenue.toFixed(2)],
+        ['Total Cost', totalCost.toFixed(2)],
+        ['Total KDV', totalKDV.toFixed(2)],
+        ['Total ÖTV', totalOTV.toFixed(2)],
+        ['Total CargoCost', totalCargo.toFixed(2)],
+        ['Total Damaged Cost', totalDamagedCost.toFixed(2)],
+        ['Gross Profit', grossProfit.toFixed(2)],
+        ['Net Profit (after all)', netProfit.toFixed(2)]
+      ];
+      rows.forEach(r=>{ html += `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`; });
+      html += '</tbody></table>';
+      html += '<table><thead><tr><th>OrderID</th><th>Address</th></tr></thead><tbody>';
+      trades.forEach(t=>{
+        html += `<tr><td>${t.orderId}</td><td class="text-left">${t.address||''}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      menuOutput.innerHTML = html;
+    }
+
+    function deleteOrderSales() {
+      const acc = currentUser.businessAcc;
+      let trades = loadTrades();
+      const userTrades = trades.filter(t=>t.businessAcc===acc);
+      if(!userTrades.length) { renderMenu("No orders to delete."); return; }
+      let list="Orders:\n";
+      userTrades.forEach(t=>{ list+=`${t.orderId}) Prod:${t.productId} Status:${t.status}\n`; });
+      const prodId=prompt(list+"Enter Product ID to delete order, or Cancel:"); if(!prodId) { renderMenu("Cancelled."); return; }
+      const idxGlobal=trades.findIndex(t=>t.productId===prodId&&t.businessAcc===acc);
+      if(idxGlobal<0) { renderMenu("Order with given Product ID not found."); return; }
+      const removed=trades.splice(idxGlobal,1)[0]; saveTrades(trades);
+      renderMenu(`✅ Order with Product ID ${removed.productId} deleted.`);
+    }
+
+    function listAllUsers() {
+      if(!currentUser) return renderMenu("⚠️ Please login first.");
+      const key=prompt("Enter 6-digit Authentication Key to list all users:");
+      if(key===AUTH_KEY){
+        let html='<table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Username</th><th>BusinessAcc</th></tr></thead><tbody>';
+        users.forEach(u=>{ html+=`<tr><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td>${u.phone}</td><td>${u.username}</td><td>${u.businessAcc}</td></tr>`; });
+        html+='</tbody></table>';
+        menuOutput.innerHTML = html;
+        const del=prompt("Enter ID of user to delete, or leave blank to cancel:");
+        if(del){ const idNum=parseInt(del,10); const idx=users.findIndex(u=>u.id===idNum);
+          if(!isNaN(idNum)&&idx>=0){ const removed=users.splice(idx,1)[0]; saveUsers(); renderMenu(`✅ Employee with ID ${removed.id} (${removed.username}) deleted.`);} else renderMenu("⛔ Invalid ID or user not found."); }
+      } else renderMenu("⛔ Invalid Authentication Key.");
+    }
+
+    // --- Inventory for Company Stock (detailed & realistic, more items) ---
+    function initInventory() {
+      const stored = localStorage.getItem('inventoryItems');
+      if (!stored) {
+        const sample = [
+          { id: 'ITM001', name: 'Mercedes-Benz S-Class 2023', quantity: 5, salePrice: 150000, cost: 120000 },
+          { id: 'ITM002', name: 'Tesla Model S 2023', quantity: 7, salePrice: 140000, cost: 100000 },
+          { id: 'ITM003', name: 'iPhone 14 Pro', quantity: 100, salePrice: 999, cost: 700 },
+          { id: 'ITM004', name: 'Dell XPS 15 Laptop', quantity: 30, salePrice: 1800, cost: 1200 },
+          { id: 'ITM005', name: 'Samsung Galaxy S23 Ultra', quantity: 80, salePrice: 1199, cost: 800 },
+          { id: 'ITM006', name: 'PlayStation 5 Console', quantity: 20, salePrice: 499, cost: 400 },
+          { id: 'ITM007', name: 'LG 27" 4K Monitor', quantity: 25, salePrice: 350, cost: 220 },
+          { id: 'ITM008', name: 'Sony WH-1000XM5 Headphones', quantity: 50, salePrice: 399, cost: 250 },
+          { id: 'ITM009', name: 'Logitech MX Mechanical Keyboard', quantity: 40, salePrice: 150, cost: 90 },
+          { id: 'ITM010', name: 'Razer DeathAdder V2 Mouse', quantity: 60, salePrice: 70, cost: 40 },
+          { id: 'ITM011', name: 'HP OfficeJet Pro Printer', quantity: 15, salePrice: 299, cost: 180 },
+          { id: 'ITM012', name: 'Netgear Nighthawk Router', quantity: 35, salePrice: 199, cost: 120 },
+          { id: 'ITM013', name: 'Seagate External HDD 2TB', quantity: 40, salePrice: 100, cost: 60 },
+          { id: 'ITM014', name: 'Kingston USB Flash 128GB', quantity: 80, salePrice: 25, cost: 10 },
+          { id: 'ITM015', name: 'Logitech C920 HD Webcam', quantity: 30, salePrice: 80, cost: 50 },
+          { id: 'ITM016', name: 'Apple Watch Series 8', quantity: 50, salePrice: 399, cost: 250 },
+          { id: 'ITM017', name: 'DJI Mini 3 Drone', quantity: 10, salePrice: 759, cost: 500 },
+          { id: 'ITM018', name: 'Canon EOS R6 Camera', quantity: 12, salePrice: 2500, cost: 1800 },
+          { id: 'ITM019', name: 'Epson Portable Projector', quantity: 8, salePrice: 1200, cost: 800 },
+          { id: 'ITM020', name: 'NVIDIA RTX 3080 Graphics Card', quantity: 5, salePrice: 699, cost: 500 },
+          { id: 'ITM021', name: 'MacBook Pro 16" 2023', quantity: 10, salePrice: 2500, cost: 1800 },
+          { id: 'ITM022', name: 'Google Pixel 7 Pro', quantity: 60, salePrice: 899, cost: 600 },
+          { id: 'ITM023', name: 'Microsoft Surface Pro 8', quantity: 20, salePrice: 1100, cost: 750 },
+          { id: 'ITM024', name: 'Bose QuietComfort Earbuds', quantity: 45, salePrice: 279, cost: 180 },
+          { id: 'ITM025', name: 'Asus ROG Gaming Laptop', quantity: 12, salePrice: 2000, cost: 1500 },
+          { id: 'ITM026', name: 'X Box 360', quantity: 12, salePrice: 2000, cost: 1500 },
+          { id: 'ITM027', name: 'Sony Headphone', quantity: 12, salePrice: 2000, cost: 1500 },
+          { id: 'ITM028', name: 'Samsung Galaxy S15', quantity: 12, salePrice: 2000, cost: 1500 },
+          { id: 'ITM029', name: 'Accessory earings Schwarowski', quantity: 12, salePrice: 2000, cost: 1500 },
+          { id: 'ITM030', name: 'PS5 Pro', quantity: 12, salePrice: 2000, cost: 1500 },
+          { id: 'ITM031', name: 'Samsung QLED TV 55" 2023', quantity: 10, salePrice: 1200, cost: 800 },
+          { id: 'ITM032', name: 'Xbox Series X Console', quantity: 15, salePrice: 499, cost: 400 },
+          { id: 'ITM033', name: 'Fitbit Charge 5', quantity: 30, salePrice: 149, cost: 90 },
+          { id: 'ITM034', name: 'Kindle Paperwhite', quantity: 25, salePrice: 129, cost: 80 },
+          { id: 'ITM035', name: 'GoPro Hero 10', quantity: 20, salePrice: 399, cost: 250 }
+        ];
+        localStorage.setItem('inventoryItems', JSON.stringify(sample));
+      }
+    }
+    function getInventory() {
+      try {
+        const inv = JSON.parse(localStorage.getItem('inventoryItems') || '[]');
+        return Array.isArray(inv) ? inv : [];
+      } catch {
+        return [];
+      }
+    }
+    function saveInventory(inv) {
+      localStorage.setItem('inventoryItems', JSON.stringify(inv));
+    }
+    function showInventoryTable() {
+      const inv = getInventory();
+      if (!inv.length) {
+        renderMenu("Inventory is empty.");
+        return;
+      }
+      let html = '<table><thead><tr><th>Item ID</th><th>Name</th><th>Quantity</th><th>Sale Price</th><th>Cost</th></tr></thead><tbody>';
+      inv.forEach(item => {
+        html += `<tr>
+          <td>${item.id}</td>
+          <td class="text-left">${item.name}</td>
+          <td>${item.quantity}</td>
+          <td>${item.salePrice.toFixed(2)}</td>
+          <td>${item.cost.toFixed(2)}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      menuOutput.innerHTML = html;
+    }
+       
+    function openResetPage() {
+  if (!currentUser) return renderMenu("⚠️ Please login first.");
+  // Simple confirm using prompt or window.confirm
+  const confirmReset = window.confirm(
+    "Would you like to return back to default state for Company?\n" +
+    "This will clear all orders and reset inventory & balance to defaults, but keep user data.\n\nProceed?"
+  );
+  if (confirmReset) {
+    resetSystem();
+    renderMenu("✅ System has been reset to default state.");
+  } else {
+    renderMenu("ℹ️ Reset cancelled.");
+  }
+}
+
+function resetSystem() {
+  // 1. Clear all trades/orders
+  localStorage.removeItem('trades');
+  // 2. Reset inventory to default sample
+  localStorage.removeItem('inventoryItems');
+  initInventory(); // re-initialize to default items defined in your initInventory()
+  // 3. Reset company account balance & receivables/payables to initial values
+  localStorage.removeItem('companyAccount');
+  initCompanyAccount(); // your existing init sets balance 50000, initial receivables/payables
+  // 4. Optionally clear customer requests so they regenerate fresh
+  localStorage.removeItem('customerRequests');
+  localStorage.removeItem('customerRequestsTimestamp');
+  console.log("[Reset] System reset: trades cleared, inventory & account reset.");
+}
+
+
+    // --- Company Account with Collect Debt functionality ---
+    function initCompanyAccount() {
+      const stored = localStorage.getItem('companyAccount');
+      if (!stored) {
+        const account = {
+          balance: 50000,
+          receivables: [
+            { name: 'Tech Supplies Ltd.', amount: 8000 },
+            { name: 'Auto Parts Co.', amount: 12000 }
+          ],
+          payables: [
+            { name: 'Office Rent Co.', amount: 5000 }
+          ]
+        };
+        localStorage.setItem('companyAccount', JSON.stringify(account));
+      }
+    }
+    function getCompanyAccount() {
+      try {
+        const acc = JSON.parse(localStorage.getItem('companyAccount') || '{}');
+        return acc;
+      } catch {
+        return null;
+      }
+    }
+    function saveCompanyAccount(acc) {
+      localStorage.setItem('companyAccount', JSON.stringify(acc));
+    }
+    function viewCompanyAccount() {
+      if (!currentUser) return renderMenu("⚠️ Please login first.");
+      const code = prompt("Enter authority code to access Company Account:");
+      if (code !== COMPANY_ACCOUNT_CODE) {
+        return renderMenu("⛔ Invalid authority code.");
+      }
+      const acc = getCompanyAccount();
+      if (!acc) return renderMenu("Company account data unavailable.");
+      let html = '<h3>Company Account</h3>';
+      html += `<p><strong>Current Balance:</strong> ${acc.balance.toFixed(2)}</p>`;
+      // Receivables (suppliers owe us)
+      html += '<h4>Receivables (Suppliers owe us):</h4>';
+      if (acc.receivables && acc.receivables.length) {
+        html += '<table><thead><tr><th>Supplier</th><th>Amount</th><th>Action</th></tr></thead><tbody>';
+        acc.receivables.forEach((d, idx) => {
+          html += `<tr data-idx="${idx}">
+            <td class="text-left">${d.name}</td>
+            <td>${d.amount.toFixed(2)}</td>
+            <td><button class="sendResponseDebtBtn" data-idx="${idx}">Send Response</button></td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+      } else {
+        html += '<p>None</p>';
+      }
+      // Payables (We owe) — added Pay Debt button here
+      html += '<h4>Payables (We owe):</h4>';
+      if (acc.payables && acc.payables.length) {
+        html += '<table><thead><tr><th>Supplier</th><th>Amount</th><th>Action</th></tr></thead><tbody>';
+        acc.payables.forEach((d, idx) => {
+          html += `<tr data-idx="${idx}">
+            <td class="text-left">${d.name}</td>
+            <td>${d.amount.toFixed(2)}</td>
+            <td><button class="payDebtBtn" data-idx="${idx}">Pay Debt</button></td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+      } else {
+        html += '<p>None</p>';
+      }
+      menuOutput.innerHTML = html;
+      // Attach event listeners for Send Response (collect debt)
+      document.querySelectorAll('.sendResponseDebtBtn').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.getAttribute('data-idx'), 10);
+          let accData = getCompanyAccount();
+          if (!accData || !accData.receivables || idx < 0 || idx >= accData.receivables.length) return;
+          const supplier = accData.receivables[idx];
+          openDebtModal(supplier.name, supplier.amount, idx);
+        };
+      });
+      // Attach event listeners for Pay Debt
+      document.querySelectorAll('.payDebtBtn').forEach(btn => {
+  btn.onclick = () => {
+    const idx = parseInt(btn.getAttribute('data-idx'), 10);
+    let accData = getCompanyAccount();
+    if (!accData || !accData.payables || idx < 0 || idx >= accData.payables.length) return;
+    const entry = accData.payables[idx];
+    const confirmPay = window.confirm(`You have ${entry.amount.toFixed(2)} debt to ${entry.name}. Do you approve to pay it?`);
+    if (confirmPay) {
+      if (accData.balance >= entry.amount) {
+        accData.balance -= entry.amount;
+        accData.payables.splice(idx, 1);
+        saveCompanyAccount(accData);
+        renderMenu(`✅ Debt of ${entry.amount.toFixed(2)} paid to ${entry.name}. New balance: ${accData.balance.toFixed(2)}`);
+        // If no more payables left, generate new debts:
+        if (accData.payables.length === 0) {
+          addNewPayable();  // ← call new function to add random new payables
+          saveCompanyAccount(accData);
+          alert('New supplier(s) have now requested payment.');
+          viewCompanyAccount(); // refresh display
+        }
+      } else {
+        alert('Insufficient balance to pay debt.');
+      }
+    } else {
+      renderMenu('Payment cancelled.');
+    }
+  };
+});
+}
+    function openDebtModal(supplierName, amount, idx) {
+      modalContainer.innerHTML = `
+        <div class="modal-overlay">
+          <div class="modal">
+            <p>Send request to <strong>${supplierName}</strong> (owes ${amount.toFixed(2)})</p>
+            <textarea id="debtText" placeholder="Type your message..."></textarea>
+            <button id="sendDebtBtn">Send Response</button>
+            <button id="cancelDebtBtn">Cancel</button>
+          </div>
+        </div>`;
+      modalContainer.style.display = 'block';
+      document.getElementById('cancelDebtBtn').onclick = () => {
+        modalContainer.style.display = 'none';
+        modalContainer.innerHTML = '';
+      };
+      document.getElementById('sendDebtBtn').onclick = () => {
+        const msg = document.getElementById('debtText').value;
+        modalContainer.style.display = 'none';
+        modalContainer.innerHTML = '';
+        renderMenu(`Request sent to ${supplierName}. Waiting for reply...`);
+        // Supplier replies immediately
+        setTimeout(() => {
+          alert(`${supplierName}: "I will send money now."`);
+          // after 5s, confirm collection
+          setTimeout(() => {
+            let accData = getCompanyAccount();
+            if (!accData) return;
+            const recIdx = accData.receivables.findIndex(r=>r.name===supplierName);
+            if (recIdx < 0) {
+              viewCompanyAccount();
+              return;
+            }
+            const rec = accData.receivables[recIdx];
+            accData.balance += rec.amount;
+            alert(`Debt has been collected successfully from ${supplierName}: ${rec.amount.toFixed(2)} added to balance.`);
+            accData.receivables.splice(recIdx, 1);
+            addNewReceivable();
+            saveCompanyAccount(accData);
+            viewCompanyAccount();
+          }, 5000);
+        }, 0);
+      };
+    }
+    function addNewReceivable() {
+      const possible = [
+        { name: 'Global Tech Traders', min: 5000, max: 15000 },
+        { name: 'Innovate Solutions', min: 3000, max: 10000 },
+        { name: 'Prime Electronics', min: 7000, max: 20000 },
+        { name: 'AutoGear Supplies', min: 4000, max: 12000 },
+        { name: 'Digital Components Inc.', min: 2000, max: 8000 }
+      ];
+      let accData = getCompanyAccount();
+      if (!accData) return;
+      const pick = possible[Math.floor(Math.random()*possible.length)];
+      const amt = Math.floor(pick.min + Math.random()*(pick.max - pick.min));
+      accData.receivables.push({ name: pick.name, amount: amt });
+      saveCompanyAccount(accData);
+    }
+    function addNewPayable() {
+  // List of possible new suppliers requesting payment:
+  const possible = [
+    { name: 'Office Supplies Inc.', min: 3000, max: 10000 },
+    { name: 'Logistics Ltd.', min: 5000, max: 15000 },
+    { name: 'Warehouse Services', min: 2000, max: 8000 },
+    { name: 'Maintenance Co.', min: 1000, max: 5000 }
+  ];
+  let accData = getCompanyAccount();
+  if (!accData) return;
+  // Pick 1 or 2 random new payables:
+  const count = Math.floor(Math.random() * 2) + 1; // 1 or 2
+  for (let i = 0; i < count; i++) {
+    const pick = possible[Math.floor(Math.random() * possible.length)];
+    const amt = Math.floor(pick.min + Math.random() * (pick.max - pick.min));
+    // Avoid duplicates: only add if not already present:
+    if (!accData.payables.some(p => p.name === pick.name)) {
+      accData.payables.push({ name: pick.name, amount: amt });
+    }
+  }
+  // Note: caller should saveCompanyAccount(accData) after calling this.
+}
+    // Customer Requests & replies
+    function processFulfillment(req) {
+      const inv = getInventory();
+      const itemIdx = inv.findIndex(it => it.name === req.requestedItem);
+      if (itemIdx < 0) return false;
+      const item = inv[itemIdx];
+      if (item.quantity < req.requestedQty) {
+        alert(`Insufficient stock for ${item.name}. Have ${item.quantity}, requested ${req.requestedQty}.`);
+        return false;
+      }
+      item.quantity -= req.requestedQty;
+      saveInventory(inv);
+      const revenue = item.salePrice * req.requestedQty;
+      const costTotal = item.cost * req.requestedQty;
+      const profit = revenue - costTotal;
+      let acc = getCompanyAccount();
+      if (!acc) return false;
+      acc.balance += profit;
+      saveCompanyAccount(acc);
+      return true;
+    }
+    
+
+    function generateCustomerRequests() { 
+  const inv = getInventory();
+  const now = Date.now();
+  const count = Math.floor(Math.random() * 5) + 3;
+  const firstNames = ['Ahmet','Mehmet','Ayşe','Fatma','Emre','Elif','Can','Zeynep','Mert','Leyla','Deniz','Burak','Ece','Kerem','Selin','Ozan','Selma','Barış','Derya','Cem'];
+  const lastNames = ['Yılmaz','Demir','Şahin','Çelik','Kaya','Yıldız','Yıldırım','Öztürk','Aydın','Koç','Arslan','Doğan','Polat','Güneş','Kurt','Uzun','Çoban','Öz','Kılıç','Ak'];
+  const streets = ['Atatürk Cd.','Cumhuriyet Blv.','İnönü Sk.','Vatan Cd.','Gazi Blv.','Fevzi Paşa Sk.','Kazım Karabekir Cd.','Peyami Safa Sk.','Barbaros Blv.','Fatih Sultan Cd.'];
+  const cities = ['Istanbul','Ankara','Izmir','Bursa','Antalya','Adana','Konya','Trabzon','Gaziantep','Mersin'];
+  const requests = [];
+  for (let i = 0; i < count; i++) {
+    const fn = firstNames[Math.floor(Math.random()*firstNames.length)];
+    const ln = lastNames[Math.floor(Math.random()*lastNames.length)];
+    const phone = '05' + Math.floor(10000000 + Math.random()*90000000);
+    const email = fn.toLowerCase() + '.' + ln.toLowerCase() + Math.floor(Math.random()*100) + '@example.com';
+    const address = `${streets[Math.floor(Math.random()*streets.length)]} No:${Math.floor(1+Math.random()*500)}, ${cities[Math.floor(Math.random()*cities.length)]}`;
+    if (inv.length === 0) continue;
+    const item = inv[Math.floor(Math.random()*inv.length)];
+    const reqQty = Math.floor(Math.random()*Math.min(item.quantity+5, 15)) + 1;
+    const id = now + '_' + i;
+    requests.push({
+      id,
+      firstName: fn,
+      lastName: ln,
+      phone,
+      email,
+      address,
+      requestedItem: item.name,
+      requestedQty: reqQty,
+      response: null,
+      fulfilled: false,
+      customerReply: null
+    });
+  }
+  localStorage.setItem('customerRequests', JSON.stringify(requests));
+  localStorage.setItem('customerRequestsTimestamp', now.toString());
+  return requests;
+}
+
+function getCustomerRequests() {
+  const stored = localStorage.getItem('customerRequests');
+  const ts = parseInt(localStorage.getItem('customerRequestsTimestamp') || '0', 10);
+  const now = Date.now();
+  if (!stored || isNaN(ts) || now - ts > 5*60*1000) {
+    return generateCustomerRequests();
+  }
+  try {
+    const arr = JSON.parse(stored);
+    if (Array.isArray(arr)) return arr;
+  } catch {}
+  return generateCustomerRequests();
+}
+
+function showCustomerRequests() {
+  const inv = getInventory();
+  const requests = getCustomerRequests();
+  let html = '<h3>Company Inventory</h3>';
+  html += '<table><thead><tr><th>Item ID</th><th>Name</th><th>Quantity</th><th>Sale Price</th><th>Cost</th></tr></thead><tbody>';
+  inv.forEach(item => {
+    html += `<tr>
+      <td>${item.id}</td>
+      <td class="text-left">${item.name}</td>
+      <td>${item.quantity}</td>
+      <td>${item.salePrice.toFixed(2)}</td>
+      <td>${item.cost.toFixed(2)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  html += '<h3>Customer Requests</h3>';
+  if (!requests.length) {
+    html += '<p>No customer requests at the moment.</p>';
+    menuOutput.innerHTML = html;
+    return;
+  }
+  html += '<table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th>Requested Item</th><th>Quantity</th><th>Response</th><th>Customer Reply</th><th>Actions</th></tr></thead><tbody>';
+  requests.forEach(req => {
+    const fullName = `${req.firstName} ${req.lastName}`;
+    const respText = req.response || '';
+    const custRep = req.customerReply || '';
+    html += `<tr data-id="${req.id}">
+      <td class="text-left"><span class="customer-name" data-id="${req.id}" style="cursor:pointer;text-decoration:underline;">${fullName}</span></td>
+      <td>${req.phone}</td>
+      <td class="text-left">${req.email}</td>
+      <td class="text-left">${req.address}</td>
+      <td class="text-left">${req.requestedItem}</td>
+      <td>${req.requestedQty}</td>
+      <td id="response-${req.id}" class="text-left">${respText}</td>
+      <td id="custreply-${req.id}" class="text-left">${custRep}</td>
+      <td>
+        <button class="respondBtn" data-id="${req.id}" ${req.fulfilled? 'disabled':''}>Respond</button>
+        <button class="sendStockBtn" data-id="${req.id}" ${req.fulfilled? 'disabled':''}>Send from Stock</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  menuOutput.innerHTML = html;
+
+  // Respond handler (unchanged)
+  document.querySelectorAll('.respondBtn').forEach(btn => {
+    btn.onclick = () => {
+      const cid = btn.getAttribute('data-id');
+      let current = JSON.parse(localStorage.getItem('customerRequests') || '[]');
+      const idx = current.findIndex(r=>r.id===cid);
+      if (idx < 0) return;
+      const req = current[idx];
+      const promptText = `Respond to ${req.firstName} ${req.lastName} (requested ${req.requestedQty} x ${req.requestedItem}):`;
+      const answer = prompt(promptText, req.response || '');
+      if (answer !== null) {
+        req.response = answer;
+        if (answer.toLowerCase().includes("I will send") && answer.toLowerCase().includes("order")) {
+          setTimeout(() => {
+            req.customerReply = "Thank you";
+            localStorage.setItem('customerRequests', JSON.stringify(current));
+            const cell = document.getElementById(`custreply-${cid}`);
+            if (cell) cell.innerText = req.customerReply;
+          }, 5000);
+        } else {
+          setTimeout(() => {
+            req.customerReply = "It's ok, another time perhaps";
+            localStorage.setItem('customerRequests', JSON.stringify(current));
+            const cell = document.getElementById(`custreply-${cid}`);
+            if (cell) cell.innerText = req.customerReply;
+          }, 5000);
+        }
+        current[idx] = req;
+        localStorage.setItem('customerRequests', JSON.stringify(current));
+        const cell = document.getElementById(`response-${cid}`);
+        if (cell) cell.innerText = answer;
+      }
+    };
+  });
+
+  // Send from Stock handler: now status 'Ordered'
+  document.querySelectorAll('.sendStockBtn').forEach(btn => {
+    btn.onclick = () => {
+      const cid = btn.getAttribute('data-id');
+      let current = JSON.parse(localStorage.getItem('customerRequests') || '[]');
+      const idx = current.findIndex(r=>r.id===cid);
+      if (idx < 0) return;
+      const req = current[idx];
+      const success = processFulfillment(req);
+      if (success) {
+        alert(`Sent ${req.requestedQty} x ${req.requestedItem} to customer.`);
+        req.fulfilled = true;
+        // Create a trade with status 'Ordered' so the map logic will pick it up
+        const trade = {
+          orderId: `CR-${cid}`,
+          businessAcc: currentUser.businessAcc,
+          productId: req.requestedItem,
+          type: req.requestedItem,
+          quantity: req.requestedQty,
+          price: getInventory().find(i=>i.name===req.requestedItem)?.salePrice || 0,
+          cost: getInventory().find(i=>i.name===req.requestedItem)?.cost || 0,
+          kdv: calculateKDV(getInventory().find(i=>i.name===req.requestedItem)?.salePrice || 0),
+          otv: 0,
+          cargoCost: 0,
+          address: req.address,
+          isDamaged: false,
+          damagedQty: 0,
+          status: 'Ordered',    // changed here
+          orderDate: new Date().toISOString().split('T')[0],
+          etaDays: 0
+        };
+        const trades = loadTrades();
+        trades.push(trade);
+        saveTrades(trades);
+        // Immediately assign to map if open
+        if (typeof assignOrders === 'function') {
+          assignOrders();
+        }
+        setTimeout(() => {
+          req.customerReply = "Thank you";
+          current[idx] = req;
+          localStorage.setItem('customerRequests', JSON.stringify(current));
+          showCustomerRequests();
+        }, 5000);
+      }
+    };
+  });
+
+  // Clicking name to respond
+  document.querySelectorAll('.customer-name').forEach(span => {
+    span.onclick = () => {
+      const cid = span.getAttribute('data-id');
+      document.querySelector(`button.respondBtn[data-id="${cid}"]`)?.click();
+    };
+  });
+}
+
+    function openBuyPage() {
+  if (!currentUser) return renderMenu("⚠️ Please login first.");
+
+  let html = '<h3>Purchase Marketplace - Select a Supplier</h3>';
+  html += '<table><thead><tr><th>Supplier</th><th>Action</th></tr></thead><tbody>';
+
+  for (const supplier in suppliers) {
+    html += `
+      <tr>
+        <td class="text-left">${supplier}</td>
+        <td><button class="supplierBtn" data-supplier="${supplier}">View Items</button></td>
+      </tr>
+    `;
+  }
+
+  html += `
+    <tr>
+      <td colspan="2"><button id="btnReturnFromBuy">Return to Menu</button></td>
+    </tr>
+  `;
+
+  html += '</tbody></table>';
+  menuOutput.innerHTML = html;
+
+  // Reconnect buttons to original function
+  document.querySelectorAll('.supplierBtn').forEach(btn => {
+    btn.onclick = () => {
+      const sup = btn.getAttribute('data-supplier');
+      openSupplierItems(sup); // ✅ calls your original function
+    };
+  });
+
+  document.getElementById('btnReturnFromBuy').onclick = () => {
+    closeSales();
+  };
+}
+
+    function openSupplierItems(supName) {
+      const items = suppliers[supName] || [];
+      let html = `<h3>Items from ${supName}</h3>`;
+      if (!items.length) {
+        html += '<p>No items available.</p>';
+        html += `<button id="backToSuppliers">Back</button>`;
+        menuOutput.innerHTML = html;
+        document.getElementById('backToSuppliers').onclick = openBuyPage;
+        return;
+      }
+      html += '<table><thead><tr><th>Item ID</th><th>Name</th><th>Sale Price</th><th>Action</th></tr></thead><tbody>';
+      items.forEach((it, idx) => {
+        html += `<tr><td>${it.id}</td><td class="text-left">${it.name}</td><td>${it.salePrice.toFixed(2)}</td>` +
+          `<td><button class="buyItemBtn" data-idx="${idx}" data-sup="${supName}">Buy</button></td></tr>`;
+      });
+      html += '</tbody></table>';
+      html += `<button id="backToSuppliers">Back</button>`;
+      menuOutput.innerHTML = html;
+
+      document.querySelectorAll('.buyItemBtn').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.getAttribute('data-idx'), 10);
+          const sup = btn.getAttribute('data-sup');
+          promptPurchase(sup, idx);
+        };
+      });
+      document.getElementById('backToSuppliers').onclick = openBuyPage;
+    }
+
+    function promptPurchase(supName, idx) {
+      const item = suppliers[supName][idx];
+      const qtyStr = prompt(`How many '${item.name}' will you purchase?`);
+      const qty = parseInt(qtyStr, 10);
+      if (isNaN(qty) || qty <= 0) {
+        return renderMenu('Invalid quantity.');
+      }
+      const baseCost = item.cost * qty;
+      const kdv = calculateKDV(item.cost) * qty;
+      let otv = 0;
+      // Apply ÖTV for motors/cars
+      if (item.name.toLowerCase().includes('motor') || item.name.toLowerCase().includes('car')) {
+        otv = calculateOTV(item.cost) * qty;
+      }
+      const total = baseCost + kdv + otv;
+      const approve = window.confirm(
+        `Purchased will cost ${total.toFixed(2)} (base ${baseCost.toFixed(2)} + KDV ${kdv.toFixed(2)} + ÖTV ${otv.toFixed(2)}). Do you approve?`
+      );
+      if (!approve) {
+        return renderMenu('Purchase cancelled.');
+      }
+      const acc = getCompanyAccount();
+      if (!acc) return renderMenu('Company account unavailable.');
+      if (acc.balance < total) {
+        alert('Insufficient balance to complete purchase.');
+        return renderMenu('Purchase failed due to insufficient balance.');
+      }
+      acc.balance -= total;
+      saveCompanyAccount(acc);
+      let inv = getInventory();
+      const existing = inv.find(i => i.name === item.name);
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        inv.push({
+          id: item.id,
+          name: item.name,
+          quantity: qty,
+          salePrice: item.salePrice,
+          cost: item.cost
+        });
+      }
+      saveInventory(inv);
+      renderMenu(`✅ Purchased ${qty} x ${item.name}. Total cost ${total.toFixed(2)} deducted. New balance: ${acc.balance.toFixed(2)}`);
+    }
+
+    initInventory();
+    initCompanyAccount();
+    setInterval(() => {
+      const ts = parseInt(localStorage.getItem('customerRequestsTimestamp') || '0', 10);
+      if (!isNaN(ts) && Date.now() - ts > 5*60*1000) {
+        localStorage.removeItem('customerRequests');
+        localStorage.removeItem('customerRequestsTimestamp');
+      }
+    }, 60*1000);
+
+   // 🔴 Red Alert (Receivables)
+const debtAlert = document.createElement('div');
+debtAlert.id = 'debtBlink';
+debtAlert.style.position = 'fixed';
+debtAlert.style.top = '10px';
+debtAlert.style.left = '10px';
+debtAlert.style.background = 'rgba(200, 0, 0, 0.95)';
+debtAlert.style.color = 'white';
+debtAlert.style.padding = '8px 14px';
+debtAlert.style.borderRadius = '8px';
+debtAlert.style.fontFamily = 'monospace';
+debtAlert.style.fontSize = '1rem';
+debtAlert.style.display = 'none';
+debtAlert.style.boxShadow = '0 0 10px rgba(255,0,0,0.7)';
+debtAlert.style.cursor = 'pointer';
+debtAlert.innerText = '📢 New supplier owes us!';
+document.body.appendChild(debtAlert);
+
+// ⚠️ Yellow Alert (Payables)
+const payableAlert = document.createElement('div');
+payableAlert.id = 'payBlink';
+payableAlert.style.position = 'fixed';
+payableAlert.style.top = '50px';
+payableAlert.style.left = '10px';
+payableAlert.style.background = 'rgba(255, 193, 7, 0.95)';
+payableAlert.style.color = 'black';
+payableAlert.style.padding = '8px 14px';
+payableAlert.style.borderRadius = '8px';
+payableAlert.style.fontFamily = 'monospace';
+payableAlert.style.fontSize = '1rem';
+payableAlert.style.display = 'none';
+payableAlert.style.boxShadow = '0 0 10px rgba(255,193,7,0.7)';
+payableAlert.style.cursor = 'pointer';
+payableAlert.innerText = '⚠️ We owe supplier(s)!';
+document.body.appendChild(payableAlert);
+
+// Independent blinkers
+let debtBlinkInterval = null, debtBlinkTimeout = null, debtVisible = true;
+let payBlinkInterval = null, payBlinkTimeout = null, payVisible = true;
+
+debtAlert.onclick = () => { stopDebtBlinker(); viewCompanyAccount(); };
+payableAlert.onclick = () => { stopPayBlinker(); viewCompanyAccount(); };
+
+function showDebtBlinker() {
+  if (debtBlinkInterval) return;
+  debtAlert.style.display = 'block';
+  debtBlinkInterval = setInterval(() => {
+    debtAlert.style.opacity = debtVisible ? '1' : '0.3';
+    debtVisible = !debtVisible;
+  }, 500);
+  debtBlinkTimeout = setTimeout(() => stopDebtBlinker(), 10000);
+}
+
+function stopDebtBlinker() {
+  clearInterval(debtBlinkInterval);
+  clearTimeout(debtBlinkTimeout);
+  debtBlinkInterval = null;
+  debtBlinkTimeout = null;
+  debtAlert.style.display = 'none';
+  debtAlert.style.opacity = '1';
+  debtVisible = true;
+}
+
+function showPayBlinker() {
+  if (payBlinkInterval) return;
+  payableAlert.style.display = 'block';
+  payBlinkInterval = setInterval(() => {
+    payableAlert.style.opacity = payVisible ? '1' : '0.3';
+    payVisible = !payVisible;
+  }, 500);
+  payBlinkTimeout = setTimeout(() => stopPayBlinker(), 10000);
+}
+
+function stopPayBlinker() {
+  clearInterval(payBlinkInterval);
+  clearTimeout(payBlinkTimeout);
+  payBlinkInterval = null;
+  payBlinkTimeout = null;
+  payableAlert.style.display = 'none';
+  payableAlert.style.opacity = '1';
+  payVisible = true;
+}
+
+setInterval(() => {
+  const acc = getCompanyAccount();
+  if (!acc) return;
+
+  if (!acc.receivables || acc.receivables.length === 0) {
+    const count = Math.floor(Math.random() * 3) + 1;
+    for (let i = 0; i < count; i++) addNewReceivable();
+
+    saveCompanyAccount(getCompanyAccount());
+    if (menuOutput.innerHTML.includes('Company Account')) {
+      viewCompanyAccount();
+      stopDebtBlinker();
+    } else {
+      showDebtBlinker();
+    }
+    console.log(`[AutoReceivable] Added ${count} receivable(s).`);
+  }
+}, 60000); // every 1 min
+
+// === PAYABLES (WE OWE SUPPLIERS) ===
+setInterval(() => {
+  const acc = getCompanyAccount();
+  if (!acc) return;
+
+  if (!acc.payables || acc.payables.length < 2) {
+    const possible = [
+      { name: 'SuperRent Warehouse', min: 3000, max: 8000 },
+      { name: 'FreshIT Supplies', min: 5000, max: 15000 },
+      { name: 'AutoBase Garage', min: 4000, max: 9000 },
+      { name: 'Global Cloud Host', min: 3500, max: 10000 }
+    ];
+    const count = 2 - acc.payables.length;
+    for (let i = 0; i < count; i++) {
+      const p = possible[Math.floor(Math.random() * possible.length)];
+      const amt = Math.floor(p.min + Math.random() * (p.max - p.min));
+      acc.payables.push({ name: p.name, amount: amt });
+    }
+
+    saveCompanyAccount(acc);
+    if (menuOutput.innerHTML.includes('Company Account')) {
+      viewCompanyAccount();
+      stopPayBlinker();
+    } else {
+      showPayBlinker();
+    }
+    console.log(`[AutoPayable] Added new payable(s).`);
+  }
+}, 60000); // every 1 min
+
+
+
+function animateMenuOutput(newContentHtml) {
+  const container = menuOutput;
+  // start fade-out
+  container.classList.remove('fade-in');
+  container.classList.add('fade-out');
+  // After transition duration (~400ms), swap content and fade-in
+  setTimeout(() => {
+    container.innerHTML = newContentHtml;
+    container.classList.remove('fade-out');
+    container.classList.add('fade-in');
+  }, 400);
+}
+
+const _origRenderMenu = renderMenu;
+function renderMenu(html) {
+  // wrap the usual <pre> content
+  const wrapped = `<pre style='color:lime; white-space:pre-wrap;'>${html}</pre>`;
+  animateMenuOutput(wrapped);
+}
+
+
+
+
+function openFinancialGraphPage() {
+  if (!currentUser) return renderMenu("⚠️ Please login first.");
+  graphOpen = true;
+
+  // 1. Gather actual profit for current year from trades
+  const trades = loadTrades().filter(t => t.businessAcc === currentUser.businessAcc);
+  const profitByYear = {};
+  trades.forEach(t => {
+    const year = t.orderDate ? t.orderDate.split('-')[0] : null;
+    if (!year) return;
+    const qty = t.quantity || 0;
+    const revenue = (t.price || 0) * qty;
+    const costTotal = (t.cost || 0) * qty;
+    const kdvTotal = (t.kdv || 0) * qty;
+    const otvTotal = (t.otv || 0) * qty;
+    const cargo = t.cargoCost || 0;
+    const damagedCost = t.isDamaged ? ((t.cost || 0) * (t.damagedQty || 0)) : 0;
+    const net = revenue - costTotal - kdvTotal - otvTotal - cargo - damagedCost;
+    profitByYear[year] = (profitByYear[year] || 0) + net;
+  });
+
+  // 2. Fixed historical values for 2020–2024
+  const histValues = {
+    '2020': 50000,
+    '2021': 45000,
+    '2022': 47000,
+    '2023': 49000,
+    '2024': 51000
+  };
+  const startYear = 2020;
+  const currentYear = new Date().getFullYear(); // e.g. 2025
+
+  // 3. Build arrays: always include 2020–2024, and always include 2025 at same level as 2024 if no net
+  const dataYears = [];
+  const dataProfits = [];
+  // 2020–2024
+  for (let y = startYear; y <= startYear + 4; y++) {
+    const ys = String(y);
+    dataYears.push(ys);
+    dataProfits.push(histValues[ys] != null ? histValues[ys] : 0);
+  }
+  // 2025
+  const ysCurrent = String(currentYear);
+  dataYears.push(ysCurrent);
+  // net profit/loss in 2025
+  const net2025 = profitByYear[ysCurrent] != null ? profitByYear[ysCurrent] : 0;
+  // baseline = 2024 fixed
+  const base2024 = histValues[String(startYear + 4)] || 0;
+  // 2025 value = base2024 + net2025 (so equals 2024 if net2025=0)
+  dataProfits.push(base2024 + net2025);
+
+
+  // 4. Build HTML and animate in
+  const html = `
+    <h3>Company Financial Graph Over Years</h3>
+    <canvas id="financialChart" width="600" height="400"
+      style="background:#111; display:block; margin:auto; border:1px solid lime;"></canvas>
+    <div style="text-align:center; margin-top:10px;">
+      <button id="btnBackFromGraph">Back to Menu</button>
+    </div>`;
+  animateMenuOutput(html);
+
+  setTimeout(() => {
+    // Auto-scroll so graph is centered
+    menuOutput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const canvas = document.getElementById('financialChart');
+    if (canvas && canvas.getContext) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const margin = 50;
+      const w = canvas.width - margin * 2;
+      const h = canvas.height - margin * 2;
+      const n = dataYears.length; // should be 6 for 2020–2025
+      const xStep = n > 1 ? w / (n - 1) : w;
+      // Determine min/max among all plotted values (2020–2025)
+      const validProfits = dataProfits.filter(v => v != null);
+      const minP = validProfits.length > 0 ? Math.min(...validProfits, 0) : 0;
+      const maxP = validProfits.length > 0 ? Math.max(...validProfits, 0) : 0;
+      const totalRange = maxP - minP || 1;
+
+      // Draw axes
+      ctx.strokeStyle = 'lime';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(margin, margin);
+      ctx.lineTo(margin, margin + h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(margin, margin + h);
+      ctx.lineTo(margin + w, margin + h);
+      ctx.stroke();
+
+      // Y ticks/grid
+      ctx.fillStyle = 'lime';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      const ticks = 5;
+      for (let i = 0; i <= ticks; i++) {
+        const yVal = minP + (totalRange * i / ticks);
+        const yPos = margin + h - (h * i / ticks);
+        ctx.fillText(yVal.toFixed(0), margin - 5, yPos);
+        ctx.strokeStyle = 'rgba(0,128,0,0.3)';
+        ctx.beginPath();
+        ctx.moveTo(margin, yPos);
+        ctx.lineTo(margin + w, yPos);
+        ctx.stroke();
+      }
+
+      // X labels
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      dataYears.forEach((yr, idx) => {
+        const xPos = margin + xStep * idx;
+        const yPos = margin + h + 5;
+        ctx.fillText(yr, xPos, yPos);
+      });
+
+      // Prepare points for all profits 2020–2025
+      const points = [];
+      dataYears.forEach((yr, idx) => {
+        const val = dataProfits[idx];
+        if (val != null) {
+          const x = margin + xStep * idx;
+          const y = margin + h - ((val - minP) / totalRange) * h;
+          points.push({ idx, x, y, val });
+        }
+      });
+
+      // Draw horizontal connectors (dashed from Y-axis to each point)
+      ctx.strokeStyle = 'rgba(0,0,255,0.5)';
+      ctx.setLineDash([5, 5]);
+      points.forEach(pt => {
+        ctx.beginPath();
+        ctx.moveTo(margin, pt.y);
+        ctx.lineTo(pt.x, pt.y);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      // Draw smooth blue curve connecting all points including 2025
+      ctx.strokeStyle = 'blue';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < points.length; i++) {
+        const pt = points[i];
+        if (i === 0) {
+          ctx.moveTo(pt.x, pt.y);
+        } else {
+          const prev = points[i - 1];
+          const mx = (prev.x + pt.x) / 2;
+          const maxOffset = h * 0.02;
+          const offset = (Math.random() * 2 - 1) * maxOffset;
+          const my = ((prev.y + pt.y) / 2) + offset;
+          ctx.quadraticCurveTo(mx, my, pt.x, pt.y);
+        }
+      }
+      ctx.stroke();
+
+      // Draw all points & labels
+      ctx.fillStyle = 'blue';
+      points.forEach(pt => {
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 4, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(pt.val.toFixed(0), pt.x, pt.y - 6);
+        ctx.fillStyle = 'blue';
+      });
+
+      // Title
+      ctx.fillStyle = 'white';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Profit Over Years', margin + w / 2, margin - 30);
+    }
+
+    // Back button
+    const btn = document.getElementById('btnBackFromGraph');
+    if (btn) btn.onclick = () => {
+      graphOpen = false;  // if using auto-refresh
+      closeSales();
+    };
+  }, 450);
+
+}
+
+function openLogisticsMapPage() {
+  if (!currentUser) return renderMenu("⚠️ Please login first.");
+  console.log("openLogisticsMapPage called");
+
+  // Build HTML: map container, canvas, panel with controls + minimap
+  const html = `
+    <div id="mapContainer" style="display:flex; width:100%; height:calc(100vh - 40px); position:relative;">
+      <canvas id="logisticsCanvas" style="flex:3; background:#222; cursor:grab;"></canvas>
+      <div id="mapPanel" style="flex:1; min-width:300px; background:#111; color:lime; padding:10px; box-sizing:border-box; font-family:monospace; overflow-y:auto;">
+        <h3>Logistics Panel</h3>
+        <div id="vehicleCounts">Loading...</div>
+        <button id="btnAddVehicle" style="margin-top:10px; width:100%; background:#0a0; color:#fff; padding:8px; border:none; cursor:pointer;">Add Vehicle</button>
+        <button id="btnExportLog" style="margin-top:10px; width:100%; background:#08f; color:#fff; padding:8px; border:none; cursor:pointer;">Export Vehicle Log</button>
+        <div style="margin-top:10px;">
+          <h4>Minimap</h4>
+          <canvas id="miniMap" width="150" height="100" style="border:1px solid lime; display:block; margin:auto; background:#111;"></canvas>
+        </div>
+        <button id="btnCloseMap" style="margin-top:10px; width:100%; background:#f00; color:#fff; padding:8px; border:none; cursor:pointer;">Quit From Map</button>
+      </div>
+      <div id="vehicleInfoBox" style="position:absolute; display:none; background:rgba(0,0,0,0.85); color:lime; padding:10px; border:1px solid lime; border-radius:5px; font-family:monospace; font-size:0.9rem; pointer-events:none; z-index:10000; box-shadow:0 0 8px rgba(0,255,0,0.7);"></div>
+    </div>
+  `;
+  menuOutput.innerHTML = html;
+  menuOutput.classList.remove('fade-in','fade-out');
+
+  setTimeout(() => {
+    const canvas = document.getElementById('logisticsCanvas');
+    const ctx = canvas.getContext('2d');
+    const panel = document.getElementById('mapPanel');
+    const btnAdd = document.getElementById('btnAddVehicle');
+    const btnExport = document.getElementById('btnExportLog');
+    const btnClose = document.getElementById('btnCloseMap');
+    const vehicleCountsDiv = document.getElementById('vehicleCounts');
+    const miniMapCanvas = document.getElementById('miniMap');
+    const miniCtx = miniMapCanvas.getContext('2d');
+    const infoBox = document.getElementById('vehicleInfoBox');
+    if (!canvas || !ctx || !panel || !btnAdd || !btnExport || !btnClose || !vehicleCountsDiv || !miniMapCanvas || !infoBox) {
+      console.error("Map elements not found");
+      return;
+    }
+
+    // Grid settings
+    const gridCols = 7;
+    const gridRows = 5;
+    let grid = null;
+
+    // Zoom & pan
+    let scale = 1.0, offsetX = 0, offsetY = 0;
+    let isDragging = false, dragStartX = 0, dragStartY = 0;
+
+    // Vehicle & auxiliary units
+    let vehicles = [];
+    let trafficUnits = [], humanUnits = [];
+    const movementLog = [];
+    const destinationMarkers = []; // { ix, iy, address, plate }
+
+    // PRNG for deterministic building placement
+    function pseudoRandomGenerator(seed) {
+      let value = seed;
+      return function() {
+        value = (value * 9301 + 49297) % 233280;
+        return value / 233280;
+      };
+    }
+
+    // Compute grid: intersections, road colors, buildingPositions
+    function computeGrid() {
+      const w = canvas.width, h = canvas.height;
+      const cellW = w / (gridCols - 1), cellH = h / (gridRows - 1);
+      const intersections = [];
+      for (let iy = 0; iy < gridRows; iy++)
+        for (let ix = 0; ix < gridCols; ix++)
+          intersections.push({ ix, iy, x: ix * cellW, y: iy * cellH });
+
+      // Road colors persistence
+      const rcKey = `roadColors_${currentUser.businessAcc}`;
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem(rcKey) || 'null'); } catch {}
+      let horiz, vert;
+      if (saved && saved.horiz && saved.vert) {
+        horiz = saved.horiz; vert = saved.vert;
+      } else {
+        horiz = []; for (let iy = 0; iy < gridRows; iy++) {
+          horiz[iy] = [];
+          for (let ix = 0; ix < gridCols - 1; ix++)
+            horiz[iy][ix] = (Math.random() < 0.7 ? 'blue' : 'orange');
+        }
+        vert = []; for (let iy = 0; iy < gridRows - 1; iy++) {
+          vert[iy] = [];
+          for (let ix = 0; ix < gridCols; ix++)
+            vert[iy][ix] = (Math.random() < 0.7 ? 'blue' : 'orange');
+        }
+        localStorage.setItem(rcKey, JSON.stringify({ horiz, vert }));
+      }
+      // Building positions persistence with types
+      const bpKey = `buildingPositions_${currentUser.businessAcc}`;
+      let buildingPositions = null;
+      try { buildingPositions = JSON.parse(localStorage.getItem(bpKey) || 'null'); } catch {}
+      if (!Array.isArray(buildingPositions)) {
+        let seed = 0;
+        for (let c of currentUser.businessAcc) seed += c.charCodeAt(0);
+        const rand = pseudoRandomGenerator(seed);
+        buildingPositions = [];
+        // interior only
+        const interior = intersections.filter(p =>
+          p.ix >= 1 && p.ix <= gridCols-2 && p.iy >= 1 && p.iy <= gridRows-2
+        );
+        const totalInter = interior.length;
+        const pickCount = Math.min(5, totalInter);
+        const used = new Set();
+        const types = ['house','school','hospital','office','shop'];
+        for (let i = 0; i < pickCount; i++) {
+          let idx;
+          do { idx = Math.floor(rand() * totalInter); }
+          while (used.has(idx) && used.size < totalInter);
+          used.add(idx);
+          const p = interior[idx];
+          const type = types[Math.floor(rand()*types.length)];
+          buildingPositions.push({ ix: p.ix, iy: p.iy, type });
+        }
+        localStorage.setItem(bpKey, JSON.stringify(buildingPositions));
+      }
+      return { intersections, horiz, vert, cellW, cellH, buildingPositions };
+    }
+
+    // Vehicle persistence
+    function loadVehicles() {
+      try { const arr = JSON.parse(localStorage.getItem('logisticsVehicles') || '[]'); return Array.isArray(arr)?arr:[]; }
+      catch { return []; }
+    }
+    function saveVehicles(arr) {
+      localStorage.setItem('logisticsVehicles', JSON.stringify(arr));
+    }
+    function initVehicles(count = 10) {
+      let vehs = loadVehicles();
+      if (vehs.length > 0) return vehs;
+      vehs = [];
+      for (let i = 1; i <= count; i++) {
+        const plate = 'TRK' + String(i).padStart(3,'0');
+        vehs.push({
+          plate,
+          status: 'idle',
+          pos: { ix: 0, iy: 0, x: 0, y: 0 },
+          path: [], pathIndex: 0,
+          orderId: null, itemDesc: null,
+          lastUpdate: Date.now(),
+          shape: ['car','truck','van'][i % 3],
+          color: '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6,'0')
+        });
+      }
+      saveVehicles(vehs);
+      return vehs;
+    }
+
+    // Address → intersection
+    function addressToIntersection(address) {
+      if (!address) {
+        return { ix: Math.floor(Math.random()*gridCols), iy: Math.floor(Math.random()*gridRows) };
+      }
+      let sum = 0;
+      for (let ch of address) sum += ch.charCodeAt(0);
+      const ix = sum % gridCols;
+      const iy = Math.floor((sum / gridCols)) % gridRows;
+      return { ix, iy };
+    }
+
+    // Assign orders to vehicles: now status 'Ordered' → 'delivering'
+    function assignOrders() {
+      const trades = loadTrades();
+      for (let t of trades) {
+        if (t.businessAcc === currentUser.businessAcc && t.status === 'Ordered') {
+          const veh = vehicles.find(v => v.status === 'idle');
+          if (!veh) break;
+          const dest = addressToIntersection(t.address || '');
+          const destIx = dest.ix, destIy = dest.iy;
+          const path = [];
+          let cx = veh.pos.ix, cy = veh.pos.iy;
+          while (cx !== destIx) {
+            cx += (destIx > cx ? 1 : -1);
+            path.push({ ix: cx, iy: cy });
+          }
+          while (cy !== destIy) {
+            cy += (destIy > cy ? 1 : -1);
+            path.push({ ix: cx, iy: cy });
+          }
+          if (path.length === 0) {
+            // same cell → immediate delivered & return
+            t.status = 'Delivered';
+            // no marker needed
+            continue;
+          }
+          veh.status = 'delivering';
+          veh.path = path;
+          veh.pathIndex = 0;
+          veh.orderId = t.orderId;
+          veh.itemDesc = `${t.quantity} x ${t.productId}`;
+          veh.destAddress = t.address || 'Unknown';
+          veh.destIx = destIx; veh.destIy = destIy;
+          veh.lastUpdate = Date.now();
+          // add destination marker
+          destinationMarkers.push({
+            ix: destIx, iy: destIy,
+            address: veh.destAddress, plate: veh.plate
+          });
+          t.status = 'InTransit';
+          saveTrades(trades);
+        }
+      }
+      saveVehicles(vehicles);
+    }
+
+    // Update panel counts
+    function updatePanel() {
+      const total = vehicles.length;
+      const available = vehicles.filter(v => v.status === 'idle').length;
+      vehicleCountsDiv.innerHTML = `<p>Total vehicles: ${total}</p><p>Available: ${available}</p>`;
+    }
+
+    // Traffic & humans (unchanged initialization)
+    function initTrafficUnits() {
+      trafficUnits = [];
+      const count = 10;
+      for (let i = 0; i < count; i++) {
+        if (Math.random() < 0.5) {
+          const row = Math.floor(Math.random() * gridRows);
+          const col = Math.floor(Math.random() * (gridCols - 1));
+          trafficUnits.push({
+            orientation: 'h', row, col, t: Math.random(),
+            dir: Math.random()<0.5?1:-1,
+            speed: 0.0005 + Math.random()*0.001,
+            color: '#ff0'
+          });
+        } else {
+          const col = Math.floor(Math.random() * gridCols);
+          const row = Math.floor(Math.random() * (gridRows - 1));
+          trafficUnits.push({
+            orientation: 'v', row, col, t: Math.random(),
+            dir: Math.random()<0.5?1:-1,
+            speed: 0.0005 + Math.random()*0.001,
+            color: '#0ff'
+          });
+        }
+      }
+    }
+    function initHumanUnits() {
+      humanUnits = [];
+      const count = 20;
+      for (let i = 0; i < count; i++) {
+        if (Math.random() < 0.5) {
+          const row = Math.floor(Math.random() * gridRows);
+          const colStart = Math.floor(Math.random() * (gridCols - 1));
+          const offsetDir = Math.random()<0.5 ? -5 : +5;
+          humanUnits.push({
+            orientation: 'h', row, colStart, t: Math.random(),
+            dir: Math.random()<0.5?1:-1,
+            speed: 0.0002 + Math.random()*0.0003,
+            offsetY: offsetDir,
+            color: '#fff'
+          });
+        } else {
+          const col = Math.floor(Math.random() * gridCols);
+          const rowStart = Math.floor(Math.random() * (gridRows - 1));
+          const offsetDir = Math.random()<0.5 ? -5 : +5;
+          humanUnits.push({
+            orientation: 'v', rowStart, col, t: Math.random(),
+            dir: Math.random()<0.5?1:-1,
+            speed: 0.0002 + Math.random()*0.0003,
+            offsetX: offsetDir,
+            color: '#ccc'
+          });
+        }
+      }
+    }
+
+    // Traffic lights
+    const trafficLights = [];
+    function initTrafficLights() {
+      trafficLights.length = 0;
+      grid.intersections.forEach(p => {
+        trafficLights.push({
+          ix: p.ix, iy: p.iy,
+          state: Math.random()<0.5?'green':'red',
+          timer: Date.now() + 2000 + Math.random()*3000
+        });
+      });
+    }
+    function updateTrafficLights() {
+      const now = Date.now();
+      trafficLights.forEach(tl => {
+        if (now >= tl.timer) {
+          tl.state = (tl.state==='green'?'red':'green');
+          tl.timer = now + 2000 + Math.random()*3000;
+        }
+      });
+    }
+
+    // Draw map: grass, roads, buildings, traffic lights, trafficUnits, humans, vehicles, destination X markers
+    function drawMap() {
+      updateTrafficLights();
+      ctx.save();
+      ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
+      ctx.clearRect(0,0,canvas.width/scale,canvas.height/scale);
+
+      // Grass fields
+      ctx.fillStyle = '#0a0';
+      for (let iy=0; iy<gridRows-1; iy++){
+        for (let ix=0; ix<gridCols-1; ix++){
+          const pTL = grid.intersections.find(p=>p.ix===ix&&p.iy===iy);
+          if (!pTL) continue;
+          ctx.fillRect(pTL.x+2, pTL.y+2, grid.cellW-4, grid.cellH-4);
+        }
+      }
+
+      // Roads
+      ctx.lineCap='round';
+      // Horizontal
+      for (let iy=0; iy<gridRows; iy++){
+        for (let ix=0; ix<gridCols-1; ix++){
+          const p1 = grid.intersections.find(p=>p.ix===ix&&p.iy===iy);
+          const p2 = grid.intersections.find(p=>p.ix===ix+1&&p.iy===iy);
+          if (!p1||!p2) continue;
+          const col = grid.horiz[iy][ix]==='blue'? '#1E90FF':'#FFA500';
+          ctx.strokeStyle = col; ctx.lineWidth=8;
+          ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+          ctx.save();
+          ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=2; ctx.setLineDash([10,10]);
+          ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+          ctx.restore();
+        }
+      }
+      // Vertical
+      for (let iy=0; iy<gridRows-1; iy++){
+        for (let ix=0; ix<gridCols; ix++){
+          const p1 = grid.intersections.find(p=>p.ix===ix&&p.iy===iy);
+          const p2 = grid.intersections.find(p=>p.ix===ix&&p.iy===iy+1);
+          if (!p1||!p2) continue;
+          const col = grid.vert[iy][ix]==='blue'? '#1E90FF':'#FFA500';
+          ctx.strokeStyle=col; ctx.lineWidth=8;
+          ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+          ctx.save();
+          ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=2; ctx.setLineDash([10,10]);
+          ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // Traffic lights
+      trafficLights.forEach(tl=>{
+        const p = grid.intersections.find(p=>p.ix===tl.ix&&p.iy===tl.iy);
+        if (!p) return;
+        const size = 8;
+        ctx.fillStyle = (tl.state==='green'? '#0f0':'#f00');
+        ctx.beginPath();
+        ctx.arc(p.x + size, p.y - size, size/2, 0, 2*Math.PI);
+        ctx.fill();
+      });
+
+      // Buildings
+      if (grid.buildingPositions){
+        grid.buildingPositions.forEach(bp=>{
+          const pt = grid.intersections.find(p=>p.ix===bp.ix&&p.iy===bp.iy);
+          if (!pt) return;
+          const size = Math.min(grid.cellW,grid.cellH)*0.6;
+          const half=size/2;
+          const x0=pt.x-half, y0=pt.y-half;
+          ctx.save();
+          switch(bp.type){
+            case 'house':
+              ctx.fillStyle='#a52';
+              ctx.shadowColor='#000'; ctx.shadowBlur=5;
+              ctx.fillRect(x0, y0+half*0.4, size, half*0.6);
+              ctx.restore();
+              ctx.fillStyle='#800';
+              ctx.beginPath();
+              ctx.moveTo(x0, y0+half*0.4);
+              ctx.lineTo(x0+half, y0);
+              ctx.lineTo(x0+size, y0+half*0.4);
+              ctx.closePath(); ctx.fill();
+              break;
+            case 'school':
+              ctx.fillStyle='#448'; ctx.shadowColor='#000'; ctx.shadowBlur=5;
+              ctx.fillRect(x0, y0+half*0.3, size, half*0.7);
+              ctx.restore();
+              ctx.fillStyle='#66a';
+              ctx.beginPath();
+              ctx.moveTo(x0, y0+half*0.3);
+              ctx.lineTo(x0+half, y0);
+              ctx.lineTo(x0+size, y0+half*0.3);
+              ctx.closePath(); ctx.fill();
+              ctx.fillStyle='#fff';
+              ctx.font=`${Math.floor(size/3)}px monospace`;
+              ctx.textAlign='center';
+              ctx.fillText('S', pt.x, pt.y+half*0.2);
+              break;
+            case 'hospital':
+              ctx.fillStyle='#800'; ctx.shadowColor='#000'; ctx.shadowBlur=5;
+              ctx.fillRect(x0, y0+half*0.3, size, half*0.7);
+              ctx.restore();
+              ctx.fillStyle='#a00';
+              ctx.beginPath();
+              ctx.moveTo(x0, y0+half*0.3);
+              ctx.lineTo(x0+half, y0);
+              ctx.lineTo(x0+size, y0+half*0.3);
+              ctx.closePath(); ctx.fill();
+              ctx.fillStyle='#fff';
+              const crossSize=size*0.4;
+              ctx.fillRect(pt.x-crossSize/2, pt.y-crossSize/10, crossSize, crossSize/5);
+              ctx.fillRect(pt.x-crossSize/10, pt.y-crossSize/2, crossSize/5, crossSize);
+              break;
+            case 'office':
+              ctx.fillStyle='#555'; ctx.shadowColor='#000'; ctx.shadowBlur=5;
+              ctx.fillRect(x0, y0+half*0.3, size, half*0.7);
+              ctx.restore();
+              ctx.fillStyle='#eef';
+              const winW=size/5, winH=half*0.2;
+              for (let r=0;r<2;r++){
+                for (let c=0;c<3;c++){
+                  ctx.fillRect(x0+5+c*(winW+5), y0+half*0.35+r*(winH+5), winW, winH);
+                }
+              }
+              break;
+            case 'shop':
+              ctx.fillStyle='#884'; ctx.shadowColor='#000'; ctx.shadowBlur=5;
+              ctx.fillRect(x0, y0+half*0.3, size, half*0.7);
+              ctx.restore();
+              ctx.fillStyle='#fff';
+              ctx.font=`${Math.floor(size/4)}px monospace`;
+              ctx.textAlign='center';
+              ctx.fillText('Shop', pt.x, y0+half*0.5);
+              break;
+            default:
+              ctx.fillStyle='#666';
+              ctx.fillRect(x0, y0+half*0.3, size, half*0.7);
+              ctx.restore();
+          }
+        });
+      }
+
+      // Draw destination markers (X)
+      destinationMarkers.forEach(dm=>{
+        const p = grid.intersections.find(p=>p.ix===dm.ix&&p.iy===dm.iy);
+        if (!p) return;
+        ctx.save();
+        ctx.strokeStyle='#f0f'; ctx.lineWidth=3;
+        const s = 10;
+        ctx.beginPath();
+        ctx.moveTo(p.x - s, p.y - s);
+        ctx.lineTo(p.x + s, p.y + s);
+        ctx.moveTo(p.x + s, p.y - s);
+        ctx.lineTo(p.x - s, p.y + s);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // Draw trafficUnits
+      trafficUnits.forEach(tu=>{
+        tu.t += tu.speed;
+        if (tu.t>1) tu.t=0;
+        if (tu.orientation==='h') {
+          const p1=grid.intersections.find(p=>p.ix===tu.col&&p.iy===tu.row);
+          const p2=grid.intersections.find(p=>p.ix===tu.col+1&&p.iy===tu.row);
+          if (p1&&p2){
+            let x = p1.x + (p2.x-p1.x)*(tu.t*tu.dir);
+            let y = p1.y;
+            if (x<Math.min(p1.x,p2.x)) x=Math.max(p1.x,p2.x);
+            if (x>Math.max(p1.x,p2.x)) x=Math.min(p1.x,p2.x);
+            ctx.save();
+            ctx.translate(x,y);
+            ctx.fillStyle=tu.color;
+            ctx.fillRect(-5,-3,10,6);
+            ctx.restore();
+          }
+        } else {
+          const p1=grid.intersections.find(p=>p.ix===tu.col&&p.iy===tu.row);
+          const p2=grid.intersections.find(p=>p.ix===tu.col&&p.iy===tu.row+1);
+          if (p1&&p2){
+            let y = p1.y + (p2.y-p1.y)*(tu.t*tu.dir);
+            let x = p1.x;
+            if (y<Math.min(p1.y,p2.y)) y=Math.max(p1.y,p2.y);
+            if (y>Math.max(p1.y,p2.y)) y=Math.min(p1.y,p2.y);
+            ctx.save();
+            ctx.translate(x,y);
+            ctx.fillStyle=tu.color;
+            ctx.fillRect(-3,-5,6,10);
+            ctx.restore();
+          }
+        }
+      });
+
+      // Draw humans
+      humanUnits.forEach(hu=>{
+        hu.t += hu.speed;
+        if (hu.t>1) hu.t=0;
+        if (hu.orientation==='h'){
+          const p1=grid.intersections.find(p=>p.ix===hu.colStart&&p.iy===hu.row);
+          const p2=grid.intersections.find(p=>p.ix===hu.colStart+1&&p.iy===hu.row);
+          if (p1&&p2){
+            let x = p1.x + (p2.x-p1.x)*(hu.t*hu.dir);
+            let y = p1.y + hu.offsetY;
+            if (x<Math.min(p1.x,p2.x)) x=Math.max(p1.x,p2.x);
+            if (x>Math.max(p1.x,p2.x)) x=Math.min(p1.x,p2.x);
+            ctx.save();
+            ctx.fillStyle=hu.color;
+            ctx.beginPath(); ctx.arc(x,y,3,0,2*Math.PI); ctx.fill();
+            ctx.restore();
+          }
+        } else {
+          const p1=grid.intersections.find(p=>p.ix===hu.col&&p.iy===hu.rowStart);
+          const p2=grid.intersections.find(p=>p.ix===hu.col&&p.iy===hu.rowStart+1);
+          if (p1&&p2){
+            let y = p1.y + (p2.y-p1.y)*(hu.t*hu.dir);
+            let x = p1.x + hu.offsetX;
+            if (y<Math.min(p1.y,p2.y)) y=Math.max(p1.y,p2.y);
+            if (y>Math.max(p1.y,p2.y)) y=Math.min(p1.y,p2.y);
+            ctx.save();
+            ctx.fillStyle=hu.color;
+            ctx.beginPath(); ctx.arc(x,y,3,0,2*Math.PI); ctx.fill();
+            ctx.restore();
+          }
+        }
+      });
+
+      // Draw vehicles
+      vehicles.forEach(v=>{
+        const vx=v.pos.x, vy=v.pos.y;
+        ctx.save();
+        ctx.translate(vx,vy);
+        ctx.fillStyle=v.color;
+        switch(v.shape){
+          case 'car':
+            ctx.fillRect(-10,-5,20,10); break;
+          case 'truck':
+            ctx.fillRect(-12,-6,24,12); break;
+          case 'van':
+            ctx.beginPath();
+            ctx.moveTo(-10,5);
+            ctx.lineTo(-10,-5);
+            ctx.lineTo(10,-5);
+            ctx.lineTo(12,0);
+            ctx.lineTo(10,5);
+            ctx.closePath(); ctx.fill();
+            break;
+          default:
+            ctx.fillRect(-8,-4,16,8);
+        }
+        // wheels
+        ctx.fillStyle='#333';
+        ctx.beginPath(); ctx.arc(-6,6,3,0,2*Math.PI); ctx.fill();
+        ctx.beginPath(); ctx.arc(6,6,3,0,2*Math.PI); ctx.fill();
+        // plate
+        ctx.fillStyle='#fff';
+        ctx.font='10px monospace';
+        ctx.textAlign='center';
+        ctx.fillText(v.plate,0,-8);
+        ctx.restore();
+
+        // Log movement
+        movementLog.push({
+          timestamp: Date.now(),
+          plate: v.plate,
+          x: vx, y: vy
+        });
+      });
+
+      ctx.restore();
+
+      updatePanel();
+      drawMiniMap();
+    }
+
+    // Minimap
+    function drawMiniMap() {
+      const mw = miniMapCanvas.width, mh = miniMapCanvas.height;
+      miniCtx.clearRect(0,0,mw,mh);
+      // background
+      miniCtx.fillStyle='#111';
+      miniCtx.fillRect(0,0,mw,mh);
+      // simple grid
+      miniCtx.strokeStyle='#555'; miniCtx.lineWidth=2;
+      for (let iy=0;iy<gridRows;iy++){
+        const y = iy*(mh/(gridRows-1));
+        miniCtx.beginPath(); miniCtx.moveTo(0,y); miniCtx.lineTo(mw,y); miniCtx.stroke();
+      }
+      for (let ix=0;ix<gridCols;ix++){
+        const x = ix*(mw/(gridCols-1));
+        miniCtx.beginPath(); miniCtx.moveTo(x,0); miniCtx.lineTo(x,mh); miniCtx.stroke();
+      }
+      // vehicles
+      vehicles.forEach(v=>{
+        const mx = v.pos.x/(canvas.width/scale)*mw;
+        const my = v.pos.y/(canvas.height/scale)*mh;
+        miniCtx.fillStyle=v.color;
+        miniCtx.beginPath(); miniCtx.arc(mx,my,3,0,2*Math.PI); miniCtx.fill();
+      });
+    }
+
+    // Animation loop
+    let mapInterval = null;
+    function startMapLoop() {
+      if (mapInterval) return;
+      mapInterval = setInterval(() => {
+        const now = Date.now();
+        let changed=false;
+        vehicles.forEach(v=>{
+          if (v.status==='delivering' && v.path && v.pathIndex < v.path.length) {
+            const next=v.path[v.pathIndex];
+            const currPt=grid.intersections.find(p=>p.ix===v.pos.ix&&p.iy===v.pos.iy);
+            const nextPt=grid.intersections.find(p=>p.ix===next.ix&&p.iy===next.iy);
+            if (!currPt||!nextPt){
+              v.status='idle'; v.path=[]; v.pathIndex=0;
+              changed=true;
+            } else {
+              let roadColor='blue', speed=0.05;
+              if (currPt.iy===nextPt.iy) {
+                const row=currPt.iy, col=Math.min(currPt.ix,nextPt.ix);
+                roadColor=grid.horiz[row][col];
+              } else {
+                const col=currPt.ix, row=Math.min(currPt.iy,nextPt.iy);
+                roadColor=grid.vert[row][col];
+              }
+              speed=(roadColor==='blue'?0.05:0.02);
+              const dx=nextPt.x - v.pos.x, dy=nextPt.y - v.pos.y;
+              const dist=Math.hypot(dx,dy);
+              const dt=now - v.lastUpdate;
+              const moveDist = speed * dt;
+              if (dist <= moveDist) {
+                v.pos.ix=next.ix; v.pos.iy=next.iy; v.pos.x=nextPt.x; v.pos.y=nextPt.y;
+                v.pathIndex++;
+                if (v.pathIndex >= v.path.length) {
+                  // reached destination
+                  alert(`Vehicle with plate ${v.plate} reached ${v.destAddress} and completed delivery.`);
+                  // remove destination marker
+                  for (let i=destinationMarkers.length-1;i>=0;i--){
+                    const dm=destinationMarkers[i];
+                    if (dm.plate===v.plate) {
+                      destinationMarkers.splice(i,1);
+                    }
+                  }
+                  // Now route back to depot [0,0]
+                  const depotIx=0, depotIy=0;
+                  const returnPath=[];
+                  let cx=v.pos.ix, cy=v.pos.iy;
+                  while (cx!==depotIx){
+                    cx += (depotIx>cx?1:-1);
+                    returnPath.push({ ix:cx, iy:cy });
+                  }
+                  while (cy!==depotIy){
+                    cy += (depotIy>cy?1:-1);
+                    returnPath.push({ ix:cx, iy:cy });
+                  }
+                  if (returnPath.length>0) {
+                    v.status='returning';
+                    v.path=returnPath;
+                    v.pathIndex=0;
+                  } else {
+                    v.status='idle';
+                    v.path=[]; v.pathIndex=0;
+                  }
+                  v.destAddress=null; v.destIx=null; v.destIy=null;
+                  updatePanel();
+                }
+              } else {
+                v.pos.x += (dx/dist)*moveDist;
+                v.pos.y += (dy/dist)*moveDist;
+              }
+              v.lastUpdate=now;
+              changed=true;
+            }
+          } else if (v.status==='returning' && v.path && v.pathIndex < v.path.length) {
+            const next=v.path[v.pathIndex];
+            const currPt=grid.intersections.find(p=>p.ix===v.pos.ix&&p.iy===v.pos.iy);
+            const nextPt=grid.intersections.find(p=>p.ix===next.ix&&p.iy===next.iy);
+            if (!currPt||!nextPt) {
+              v.status='idle'; v.path=[]; v.pathIndex=0; changed=true;
+            } else {
+              let roadColor='blue', speed=0.05;
+              if (currPt.iy===nextPt.iy) {
+                const row=currPt.iy, col=Math.min(currPt.ix,nextPt.ix);
+                roadColor=grid.horiz[row][col];
+              } else {
+                const col=currPt.ix, row=Math.min(currPt.iy,nextPt.iy);
+                roadColor=grid.vert[row][col];
+              }
+              speed=(roadColor==='blue'?0.05:0.02);
+              const dx=nextPt.x - v.pos.x, dy=nextPt.y - v.pos.y;
+              const dist=Math.hypot(dx,dy);
+              const dt=now - v.lastUpdate;
+              const moveDist = speed * dt;
+              if (dist <= moveDist) {
+                v.pos.ix=next.ix; v.pos.iy=next.iy; v.pos.x=nextPt.x; v.pos.y=nextPt.y;
+                v.pathIndex++;
+                if (v.pathIndex >= v.path.length) {
+                  v.status='idle'; v.path=[]; v.pathIndex=0;
+                  updatePanel();
+                }
+              } else {
+                v.pos.x += (dx/dist)*moveDist;
+                v.pos.y += (dy/dist)*moveDist;
+              }
+              v.lastUpdate=now;
+              changed=true;
+            }
+          }
+        });
+        if (changed) saveVehicles(vehicles);
+        drawMap();
+      }, 50);
+    }
+    function stopMapLoop() {
+      if (mapInterval) {
+        clearInterval(mapInterval);
+        mapInterval=null;
+      }
+    }
+
+    // Resize & compute grid
+    function resizeCanvas() {
+      const container = document.getElementById('mapContainer');
+      canvas.width = container.clientWidth - panel.offsetWidth;
+      canvas.height = container.clientHeight;
+      grid = computeGrid();
+      vehicles.forEach(v=>{
+        const pt=grid.intersections.find(p=>p.ix===v.pos.ix&&p.iy===v.pos.iy);
+        if (pt) { v.pos.x=pt.x; v.pos.y=pt.y; }
+        else {
+          const margin=20;
+          v.pos.x=margin+Math.random()*(canvas.width/scale-2*margin);
+          v.pos.y=margin+Math.random()*(canvas.height/scale-2*margin);
+        }
+      });
+      drawMap();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Zoom/pan handlers
+    canvas.addEventListener('wheel', e=>{
+      e.preventDefault();
+      const rect=canvas.getBoundingClientRect();
+      const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+      const x0=(mx-offsetX)/scale, y0=(my-offsetY)/scale;
+      const delta=-e.deltaY*0.001;
+      const newScale=Math.min(Math.max(0.5, scale*(1+delta)), 3);
+      scale=newScale;
+      offsetX=mx - x0*scale;
+      offsetY=my - y0*scale;
+      drawMap();
+    });
+    canvas.addEventListener('mousedown', e=>{
+      isDragging=true;
+      dragStartX=e.clientX-offsetX;
+      dragStartY=e.clientY-offsetY;
+      canvas.style.cursor='grabbing';
+    });
+    window.addEventListener('mousemove', e=>{
+      if (!isDragging) return;
+      offsetX=e.clientX-dragStartX;
+      offsetY=e.clientY-dragStartY;
+      drawMap();
+    });
+    window.addEventListener('mouseup', e=>{
+      if (isDragging) {
+        isDragging=false;
+        canvas.style.cursor='grab';
+      }
+    });
+
+    // Canvas click for vehicle info
+    canvas.addEventListener('click', e=>{
+      const rect=canvas.getBoundingClientRect();
+      const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+      const x=(mx-offsetX)/scale, y=(my-offsetY)/scale;
+      const radius=10;
+      const found=vehicles.find(v=>{
+        const dx=v.pos.x-x, dy=v.pos.y-y;
+        return Math.hypot(dx,dy)<=radius;
+      });
+      if (found) {
+        infoBox.style.display='block';
+        infoBox.innerHTML=`
+          <p>Plate: ${found.plate}</p>
+          <p>Status: ${found.status}</p>
+          ${found.status==='delivering'? `<p>Delivering to: ${found.destAddress}</p>`:''}
+        `;
+        let left=e.clientX+10, top=e.clientY+10;
+        infoBox.style.left=left+'px';
+        infoBox.style.top=top+'px';
+        setTimeout(()=>{ infoBox.style.display='none'; },3000);
+      }
+    });
+
+    // Panel buttons
+    btnAdd.onclick = ()=>{
+      const margin=20;
+      const x=margin + Math.random()*(canvas.width/scale - 2*margin);
+      const y=margin + Math.random()*(canvas.height/scale -2*margin);
+      const plate='TRK'+String(vehicles.length+1).padStart(3,'0');
+      const veh={
+        plate,
+        status:'idle',
+        pos:{ ix:0, iy:0, x, y },
+        path:[], pathIndex:0, orderId:null, itemDesc:null,
+        lastUpdate:Date.now(),
+        shape:['car','truck','van'][vehicles.length%3],
+        color:'#'+Math.floor(Math.random()*0xFFFFFF).toString(16).padStart(6,'0')
+      };
+      vehicles.push(veh);
+      saveVehicles(vehicles);
+      drawMap();
+    };
+    btnExport.onclick = ()=>{
+      if (movementLog.length===0) return alert("No movement data yet.");
+      let csv='timestamp,plate,x,y\n';
+      movementLog.forEach(entry=>{
+        csv+=`${entry.timestamp},${entry.plate},${entry.x.toFixed(2)},${entry.y.toFixed(2)}\n`;
+      });
+      const blob=new Blob([csv],{type:'text/csv'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download=`vehicle_log_${currentUser.businessAcc}_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    };
+    btnClose.onclick = ()=>{
+      console.log("Quit Map clicked");
+      stopMapLoop();
+      window.removeEventListener('resize', resizeCanvas);
+      renderMenu("<h3 style='padding:20px;'>Map closed.</h3>");
+    };
+
+    // Initialize everything
+    resizeCanvas();
+    grid = computeGrid();
+    initTrafficUnits();
+    initHumanUnits();
+    trafficLights.length=0; initTrafficLights();
+
+    // Prompt fleet size on each map open
+    let fleetSize = parseInt(prompt("Enter fleet size (number of vehicles):", "10"), 10);
+    if (isNaN(fleetSize) || fleetSize <= 0) fleetSize = 10;
+    vehicles = initVehicles(fleetSize);
+    vehicles.forEach(v=>{
+      const pt=grid.intersections.find(p=>p.ix===v.pos.ix&&p.iy===v.pos.iy);
+      if (pt) { v.pos.x=pt.x; v.pos.y=pt.y; }
+      else {
+        const margin=20;
+        v.pos.x=margin+Math.random()*(canvas.width/scale -2*margin);
+        v.pos.y=margin+Math.random()*(canvas.height/scale -2*margin);
+      }
+      v.lastUpdate=Date.now();
+    });
+    saveVehicles(vehicles);
+    assignOrders();
+    updatePanel();
+
+    startMapLoop();
+    drawMap();
+  }, 100);
+}
+
+    loadUsers();
+    const logged = loadCurrentUser();
+    if(!logged) renderInitial("Please choose: Register new user, Login, Forgot Password, or Exit.\nExisting sample user: username: ali, password: 1234");
+
+    function updateClock() {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('tr-TR', { year: 'numeric', month: 'numeric', day: 'numeric' });
+      const timeStr = now.toLocaleTimeString('tr-TR');
+      document.getElementById('liveClock').innerText = `${dateStr} ${timeStr}`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+  </script>
+</body>
+</html>
